@@ -8,7 +8,7 @@
 //! - Smoothing operations
 
 use crate::{Mesh, Vertex, Triangle, Edge, MeshResult, MeshError};
-use glam::{Vec2, Vec3, Quat, Mat4};
+use glam::{Vec2, Vec3, Vec4, Quat, Mat4};
 use std::collections::{HashMap, HashSet};
 
 /// Applies a transformation matrix to all vertices in the mesh

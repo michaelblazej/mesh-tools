@@ -397,8 +397,7 @@ fn build_gltf_json(
         accessor_index += 1;
     }
     
-    json.push_str(&format!("\n          }},\n          \"indices\": {},\n          \"material\": 0\n        }}\n      ]}}
-  ]],\n", accessor_index));
+    json.push_str(&format!("\n          }},\n          \"indices\": {},\n          \"material\": 0\n        }}\n      ]}}\n  ],\n", accessor_index));
     
     // Accessors
     json.push_str(r#"  "accessors": [
@@ -450,7 +449,7 @@ fn build_gltf_json(
         json.push_str(r#",
     {
       "bufferView": "#);
-        json.push_str(&format!("{}", options.export_normals ? 2 : 1));
+        json.push_str(&format!("{}", options.export_normals as usize + 1));
         json.push_str(r#",
       "componentType": 5126,
       "count": "#);
