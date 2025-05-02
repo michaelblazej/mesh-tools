@@ -1,21 +1,45 @@
 use mesh_tools::{
-    Mesh,
+    Mesh, Vertex,
     primitives::{create_cube, create_sphere, create_torus, TorusParams},
     modifiers::{transform_mesh, scale_mesh, rotate_mesh, translate_mesh, generate_smooth_normals},
     export::ExportMesh,
 };
 use std::fs::create_dir_all;
-use glam::{Vec3, Mat4, Quat};
+use glam::{Vec3, Mat4, Quat, Vec2};
 use std::f32::consts::PI;
+
+// Helper function to combine meshes since Mesh doesn't have a merge method
+fn combine_meshes(meshes: &[&Mesh]) -> Mesh {
+    let mut result = Mesh::new();
+    
+    for mesh in meshes {
+        let base_vertex_index = result.vertices.len();
+        
+        // Add all vertices from this mesh
+        for vertex in &mesh.vertices {
+            result.add_vertex(vertex.clone());
+        }
+        
+        // Add all triangles with adjusted indices
+        for triangle in &mesh.triangles {
+            let a = triangle.indices[0] + base_vertex_index;
+            let b = triangle.indices[1] + base_vertex_index;
+            let c = triangle.indices[2] + base_vertex_index;
+            result.add_triangle(a, b, c).unwrap();
+        }
+    }
+    
+    result
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create output directory if it doesn't exist
     create_dir_all("output")?;
     
     // Example 1: Create a spiral staircase using transformations
-    let mut spiral = Mesh::new();
     let step_count = 20;
     let step = create_cube(0.8, 0.1, 0.3);
+    let mut steps = Vec::new();
     
     for i in 0..step_count {
         let mut step_instance = step.clone();
@@ -33,25 +57,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let z = radius * angle.sin();
         translate_mesh(&mut step_instance, Vec3::new(x, height, z));
         
-        // Merge into main mesh
-        spiral.merge(&step_instance);
+        // Add to collection for later combination
+        steps.push(step_instance);
     }
+    
+    // Combine all steps into one mesh
+    let spiral = combine_meshes(&steps.iter().collect::<Vec<&Mesh>>());
     
     println!("Spiral staircase: {} vertices, {} triangles", 
              spiral.vertices.len(), spiral.triangles.len());
     spiral.export_glb("output/transform_spiral_staircase.glb")?;
     
     // Example 2: Creating a tower of differently scaled cubes
-    let mut tower = Mesh::new();
     let cube = create_cube(1.0, 1.0, 1.0);
     let levels = 8;
+    let mut cubes = Vec::new();
     
     for i in 0..levels {
         let mut level_cube = cube.clone();
         
         // Scale the cube - gets smaller as it goes up
         let scale_factor = 1.0 - (i as f32 * 0.1);
-        scale_mesh(&mut level_cube, scale_factor);
+        scale_mesh(&mut level_cube, Vec3::splat(scale_factor));
         
         // Position each level
         translate_mesh(&mut level_cube, Vec3::new(0.0, i as f32 * 1.1, 0.0));
@@ -60,15 +87,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let rotation_angle = i as f32 * (PI / 8.0);
         rotate_mesh(&mut level_cube, Quat::from_rotation_y(rotation_angle));
         
-        // Add to tower
-        tower.merge(&level_cube);
+        // Add to collection
+        cubes.push(level_cube);
     }
+    
+    // Combine all cubes into tower
+    let tower = combine_meshes(&cubes.iter().collect::<Vec<&Mesh>>());
     
     println!("Tower of cubes: {} vertices, {} triangles", 
              tower.vertices.len(), tower.triangles.len());
     tower.export_glb("output/transform_tower.glb")?;
     
-    // Example 3: Create a complex transformation - a twisting cylinder
+    // Example 3: Create a complex transformation - a twisting torus
     let mut twisted_torus = create_torus(TorusParams {
         radius: 1.0,
         tube_radius: 0.2,
@@ -78,18 +108,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Apply a twisting transformation
     for vertex in &mut twisted_torus.vertices {
-        if let Some(position) = &mut vertex.position {
-            // Calculate twist angle based on height
-            let twist_factor = position.y * 2.0 * PI;
-            
-            // Create rotation matrix for the twist
-            let rotation = Mat4::from_rotation_y(twist_factor);
-            
-            // Apply the twist transformation to x and z while preserving y
-            let original_y = position.y;
-            *position = rotation.transform_point3(*position);
-            position.y = original_y; // Preserve the original height
-        }
+        // Calculate twist angle based on height
+        let twist_factor = vertex.position.y * 2.0 * PI;
+        
+        // Create rotation matrix for the twist
+        let rotation = Mat4::from_rotation_y(twist_factor);
+        
+        // Apply the twist transformation to x and z while preserving y
+        let original_y = vertex.position.y;
+        vertex.position = rotation.transform_point3(vertex.position);
+        vertex.position.y = original_y; // Preserve the original height
     }
     
     // Recalculate normals after the transformation
@@ -105,15 +133,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Apply wave pattern to vertices
     for vertex in &mut wave_sphere.vertices {
-        if let Some(position) = &mut vertex.position {
-            // Create a wave pattern based on position
-            let frequency = 5.0;
-            let amplitude = 0.2;
-            let wave = amplitude * (frequency * position.x).sin() * (frequency * position.z).cos();
-            
-            // Scale the position outward based on the wave
-            *position *= 1.0 + wave;
-        }
+        // Create a wave pattern based on position
+        let frequency = 5.0;
+        let amplitude = 0.2;
+        let wave = amplitude * (frequency * vertex.position.x).sin() * (frequency * vertex.position.z).cos();
+        
+        // Scale the position outward based on the wave
+        vertex.position *= 1.0 + wave;
     }
     
     // Recalculate normals
@@ -124,12 +150,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     wave_sphere.export_glb("output/transform_wave_sphere.glb")?;
     
     // Example 5: Create a scene with multiple transformed objects
-    let mut scene = Mesh::new();
+    let mut scene_objects = Vec::new();
     
     // Create ground plane
     let mut ground = create_cube(5.0, 0.1, 5.0);
     translate_mesh(&mut ground, Vec3::new(0.0, -0.5, 0.0));
-    scene.merge(&ground);
+    scene_objects.push(ground);
     
     // Add several objects with various transformations
     for i in 0..5 {
@@ -140,7 +166,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             0.3, 
             -1.5
         ));
-        scene.merge(&obj_sphere);
+        scene_objects.push(obj_sphere);
         
         // Create and transform a cube
         let mut obj_cube = create_cube(0.4, 0.4, 0.4);
@@ -150,7 +176,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             -0.5
         ));
         rotate_mesh(&mut obj_cube, Quat::from_rotation_y(PI / 4.0 * i as f32));
-        scene.merge(&obj_cube);
+        scene_objects.push(obj_cube);
         
         // Create and transform a torus
         let mut obj_torus = create_torus(TorusParams {
@@ -165,8 +191,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             0.5
         ));
         rotate_mesh(&mut obj_torus, Quat::from_rotation_x(PI / 2.0));
-        scene.merge(&obj_torus);
+        scene_objects.push(obj_torus);
     }
+    
+    // Combine all objects into scene
+    let scene = combine_meshes(&scene_objects.iter().collect::<Vec<&Mesh>>());
     
     println!("Complex scene: {} vertices, {} triangles", 
              scene.vertices.len(), scene.triangles.len());

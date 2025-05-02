@@ -1,11 +1,11 @@
 use mesh_tools::{
-    Mesh, Vertex,
-    primitives::{create_cube, create_sphere, create_plane, PlaneParams},
-    modifiers::{flip_normals, generate_smooth_normals, generate_flat_normals, scale_mesh},
+    primitives::{create_cube, create_sphere, create_plane},
+    modifiers::{flip_normals, generate_smooth_normals, scale_mesh},
     export::ExportMesh,
+    Mesh, Vertex,
 };
 use std::fs::create_dir_all;
-use glam::Vec3;
+use glam::{Vec3, Vec2};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create output directory if it doesn't exist
@@ -27,16 +27,47 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     flipped_cube.export_glb("output/normal_cube_flipped.glb")?;
     
     // Example 2: Generating smooth normals for a sphere with initially flat normals
-    // Create a low-poly UV sphere with flat normals first
+    // Create a low-poly UV sphere
     let mut flat_sphere = create_sphere(1.0, 8, 6);
     
-    // Ensure we start with flat normals
-    generate_flat_normals(&mut flat_sphere);
+    // Create copy of the sphere with flat (faceted) normals by duplicating vertices
+    let mut faceted_sphere = Mesh::new();
     
-    println!("Sphere with flat normals: {} vertices", flat_sphere.vertices.len());
-    flat_sphere.export_glb("output/normal_sphere_flat.glb")?;
+    // Duplicate vertices for each triangle to create flat normals
+    for triangle in &flat_sphere.triangles {
+        let indices = triangle.indices;
+        
+        // Get original vertices
+        let v0 = flat_sphere.vertices[indices[0]].clone();
+        let v1 = flat_sphere.vertices[indices[1]].clone();
+        let v2 = flat_sphere.vertices[indices[2]].clone();
+        
+        // Calculate flat normal for this face
+        let pos0 = v0.position;
+        let pos1 = v1.position;
+        let pos2 = v2.position;
+        
+        let edge1 = pos1 - pos0;
+        let edge2 = pos2 - pos0;
+        let normal = edge1.cross(edge2).normalize();
+        
+        // Add new vertices with the flat normal
+        let new_v0 = Vertex::with_all(pos0, normal, v0.uv.unwrap_or_default());
+        let new_v1 = Vertex::with_all(pos1, normal, v1.uv.unwrap_or_default());
+        let new_v2 = Vertex::with_all(pos2, normal, v2.uv.unwrap_or_default());
+        
+        // Add to mesh
+        let i0 = faceted_sphere.add_vertex(new_v0);
+        let i1 = faceted_sphere.add_vertex(new_v1);
+        let i2 = faceted_sphere.add_vertex(new_v2);
+        
+        faceted_sphere.add_triangle(i0, i1, i2)?;
+    }
     
-    // Generate smooth normals
+    println!("Sphere with flat normals: {} vertices", faceted_sphere.vertices.len());
+    faceted_sphere.export_glb("output/normal_sphere_flat.glb")?;
+    
+    // Generate smooth normals on the original sphere
     let mut smooth_sphere = flat_sphere.clone();
     generate_smooth_normals(&mut smooth_sphere);
     
@@ -47,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut faceted_cube = create_cube(1.0, 1.0, 1.0);
     
     // Make cube slightly larger for better visibility
-    scale_mesh(&mut faceted_cube, 1.2);
+    scale_mesh(&mut faceted_cube, Vec3::new(1.2, 1.2, 1.2));
     
     // Convert to a faceted look by ensuring each triangle has its own vertices
     // This requires duplicating vertices so each face has unique normals
@@ -62,9 +93,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let v2 = faceted_cube.vertices[indices[2]].clone();
         
         // Calculate flat normal for this face
-        let pos0 = v0.position.unwrap();
-        let pos1 = v1.position.unwrap();
-        let pos2 = v2.position.unwrap();
+        let pos0 = v0.position;
+        let pos1 = v1.position;
+        let pos2 = v2.position;
         
         let edge1 = pos1 - pos0;
         let edge2 = pos2 - pos0;
@@ -88,24 +119,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     faceted_mesh.export_glb("output/normal_cube_faceted.glb")?;
     
     // Example 4: Creating a normal mapped plane
-    let plane_params = PlaneParams {
-        width: 2.0,
-        height: 2.0,
-        width_segments: 20,
-        height_segments: 20,
-    };
-    let mut bumpy_plane = create_plane(plane_params);
+    let plane = create_plane(2.0, 2.0, 20, 20);
+    let mut bumpy_plane = plane.clone();
     
     // Displace the geometry but keep smooth normals for normal mapping visualization
     for vertex in &mut bumpy_plane.vertices {
-        if let Some(position) = &mut vertex.position {
-            // Create a bumpy surface
-            let x = position.x * 5.0;
-            let z = position.z * 5.0;
-            
-            // Apply a simple bump function
-            position.y = 0.1 * (x.sin() * z.cos());
-        }
+        // Create a bumpy surface
+        let x = vertex.position.x * 5.0;
+        let z = vertex.position.z * 5.0;
+        
+        // Apply a simple bump function
+        vertex.position.y = 0.1 * (x.sin() * z.cos());
     }
     
     // Generate smooth normals
