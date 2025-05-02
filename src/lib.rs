@@ -2,6 +2,8 @@ use glam::{Vec2, Vec3, Vec4};
 use std::collections::HashMap;
 use thiserror::Error;
 
+pub mod primitives;
+
 /// Errors that can occur when working with meshes
 #[derive(Error, Debug)]
 pub enum MeshError {
