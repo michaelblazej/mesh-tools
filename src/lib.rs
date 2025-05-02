@@ -4,6 +4,7 @@ use thiserror::Error;
 
 pub mod primitives;
 pub mod modifiers;
+pub mod export;
 
 /// Errors that can occur when working with meshes
 #[derive(Error, Debug)]
