@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 pub mod primitives;
+pub mod modifiers;
 
 /// Errors that can occur when working with meshes
 #[derive(Error, Debug)]
