@@ -196,6 +196,8 @@ pub struct Mesh {
     pub polygons: Option<Vec<Polygon>>,
     /// Custom vertex attributes
     pub custom_attributes: HashMap<String, Vec<Vec3>>,
+    /// Material information for this mesh (optional)
+    pub material: Option<export::Material>,
     /// Whether the mesh has normals
     has_normals: bool,
     /// Whether the mesh has texture coordinates
@@ -210,6 +212,7 @@ impl Mesh {
             triangles: Vec::new(),
             polygons: None,
             custom_attributes: HashMap::new(),
+            material: None,
             has_normals: false,
             has_uvs: false,
         }
@@ -225,6 +228,7 @@ impl Mesh {
             triangles,
             polygons: None,
             custom_attributes: HashMap::new(),
+            material: None,
             has_normals,
             has_uvs,
         }
@@ -245,6 +249,7 @@ impl Mesh {
             triangles,
             polygons: Some(polygons),
             custom_attributes: HashMap::new(),
+            material: None,
             has_normals,
             has_uvs,
         }
@@ -374,6 +379,17 @@ impl Mesh {
         self.custom_attributes.insert(name.to_string(), values);
         Ok(())
     }
+    
+    /// Set the material for this mesh
+    pub fn with_material(&mut self, material: export::Material) -> &mut Self {
+        self.material = Some(material);
+        self
+    }
+    
+    /// Get the material for this mesh, if one exists
+    pub fn get_material(&self) -> Option<&export::Material> {
+        self.material.as_ref()
+    }
 }
 
 /// A meshlet is a small, cache-friendly subset of a larger mesh
@@ -491,6 +507,38 @@ impl MeshletGroup {
             base_mesh: mesh,
             meshlets,
         }
+    }
+}
+
+/// A scene container for multiple meshes with different materials
+#[derive(Debug, Clone)]
+pub struct Scene {
+    /// Meshes in the scene
+    pub meshes: Vec<Mesh>,
+    /// Name of the scene
+    pub name: String,
+}
+
+impl Scene {
+    /// Create a new empty scene
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            meshes: Vec::new(),
+            name: name.into(),
+        }
+    }
+    
+    /// Add a mesh to the scene
+    pub fn add_mesh(&mut self, mesh: Mesh) -> &mut Self {
+        self.meshes.push(mesh);
+        self
+    }
+    
+    /// Create a scene with a single mesh
+    pub fn from_mesh(mesh: Mesh, name: impl Into<String>) -> Self {
+        let mut scene = Self::new(name);
+        scene.add_mesh(mesh);
+        scene
     }
 }
 

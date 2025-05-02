@@ -1,7 +1,8 @@
 use mesh_tools::{
+    Scene,
     primitives::{create_sphere, create_torus, create_cube, TorusParams},
-    modifiers::{scale_mesh, translate_mesh},
-    export::{ExportMesh, GlbExportOptions, Material},
+    modifiers::translate_mesh,
+    export::{ExportMesh, GlbExportOptions, Material, ExportScene},
 };
 use glam::Vec3;
 
@@ -18,6 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         export_normals: true,
         export_uvs: true,
         material: Material {
+            name: "ShinyRedMaterial".to_string(),
             base_color: [0.9, 0.1, 0.1], // Red
             metallic: 0.7,               // Quite metallic
             roughness: 0.2,              // Smooth/shiny
@@ -44,6 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         export_normals: true,
         export_uvs: true,
         material: Material {
+            name: "EmissiveBlueMaterial".to_string(),
             base_color: [0.2, 0.2, 0.8], // Blue
             metallic: 0.0,               // Non-metallic
             roughness: 0.5,              // Medium roughness
@@ -55,70 +58,67 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     torus.export_glb_with_options("output/glowing_torus.glb", emissive_blue)?;
     println!("Exported torus with emissive blue material");
     
-    // Example 3: Create a scene with multiple objects
-    let mut scene = mesh_tools::Mesh::new();
+    // Example 3: Create a scene with multiple objects, each with its own material
+    println!("\nExample 3: Creating a scene with different materials");
     
-    // Create and add a cube
+    // Create a multi-material scene
+    let mut multi_material_scene = Scene::new("MaterialShowcase");
+    
+    // Create and add a cube with metal material
     let mut cube = create_cube(1.0, 1.0, 1.0);
     translate_mesh(&mut cube, Vec3::new(2.0, 0.0, 0.0));
     
-    // Add the cube vertices to our scene
-    let cube_vertex_offset = scene.vertices.len();
-    for vertex in cube.vertices {
-        scene.add_vertex(vertex);
-    }
+    // Set gold material for the cube
+    cube.with_material(Material {
+        name: "GoldMaterial".to_string(),
+        base_color: [1.0, 0.85, 0.0], // Gold color
+        metallic: 0.9,                // Very metallic
+        roughness: 0.1,               // Very smooth
+        emissive: [0.1, 0.1, 0.0],    // Slight emission
+    });
     
-    // Add the cube triangles to our scene (with vertex index offset)
-    for triangle in cube.triangles {
-        scene.add_triangle(
-            triangle.indices[0] + cube_vertex_offset,
-            triangle.indices[1] + cube_vertex_offset,
-            triangle.indices[2] + cube_vertex_offset,
-        )?;
-    }
+    // Add cube to scene
+    multi_material_scene.add_mesh(cube);
     
-    // Create and add a sphere
+    // Create and add a sphere with glass-like material
     let mut sphere = create_sphere(0.8, 16, 8);
     translate_mesh(&mut sphere, Vec3::new(-2.0, 0.0, 0.0));
     
-    // Add the sphere vertices to our scene
-    let sphere_vertex_offset = scene.vertices.len();
-    for vertex in sphere.vertices {
-        scene.add_vertex(vertex);
-    }
+    // Set glass material for the sphere
+    sphere.with_material(Material {
+        name: "GlassMaterial".to_string(),
+        base_color: [0.9, 0.9, 1.0],  // Slight blue tint
+        metallic: 0.0,                // Non-metallic
+        roughness: 0.0,               // Very smooth
+        emissive: [0.0, 0.0, 0.0],    // No emission
+    });
     
-    // Add the sphere triangles to our scene (with vertex index offset)
-    for triangle in sphere.triangles {
-        scene.add_triangle(
-            triangle.indices[0] + sphere_vertex_offset,
-            triangle.indices[1] + sphere_vertex_offset,
-            triangle.indices[2] + sphere_vertex_offset,
-        )?;
-    }
+    // Add sphere to scene
+    multi_material_scene.add_mesh(sphere);
     
-    // Create and add a torus
+    // Create and add a torus with glow material
     let mut torus = create_torus(TorusParams::default());
     translate_mesh(&mut torus, Vec3::new(0.0, 0.0, 2.0));
     
-    // Add the torus vertices to our scene
-    let torus_vertex_offset = scene.vertices.len();
-    for vertex in torus.vertices {
-        scene.add_vertex(vertex);
-    }
+    // Set glowing material for the torus
+    torus.with_material(Material {
+        name: "GlowingGreenMaterial".to_string(),
+        base_color: [0.2, 0.8, 0.2],  // Green
+        metallic: 0.0,                // Non-metallic
+        roughness: 0.5,               // Medium roughness
+        emissive: [0.0, 0.6, 0.0],    // Green emission
+    });
     
-    // Add the torus triangles to our scene (with vertex index offset)
-    for triangle in torus.triangles {
-        scene.add_triangle(
-            triangle.indices[0] + torus_vertex_offset,
-            triangle.indices[1] + torus_vertex_offset,
-            triangle.indices[2] + torus_vertex_offset,
-        )?;
-    }
+    // Add torus to scene
+    multi_material_scene.add_mesh(torus);
     
-    // Export the combined scene
-    println!("Created combined scene with {} vertices and {} triangles", 
-             scene.vertices.len(), scene.triangles.len());
-    scene.export_glb("output/combined_scene.glb")?;
+    // Export the scene with multiple materials in a single GLB file
+    multi_material_scene.export_scene_glb("output/multi_material_scene.glb")?;
+    println!("Exported single GLB file with multiple objects and materials");
+    println!("The scene contains:");
+    println!("  - Gold cube (GoldMaterial)");
+    println!("  - Glass-like sphere (GlassMaterial)");
+    println!("  - Glowing green torus (GlowingGreenMaterial)");
     
     // Example 4: Export same model with different quality settings
     for (quality, segments) in [("low", 8), ("medium", 16), ("high", 32)] {
@@ -189,6 +189,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         export_normals: true,
         export_uvs: true,
         material: Material {
+            name: "TerrainMaterial".to_string(),
             base_color: [0.3, 0.8, 0.3], // Green
             metallic: 0.0,               // Non-metallic
             roughness: 0.8,              // Rough
