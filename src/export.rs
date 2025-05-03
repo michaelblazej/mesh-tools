@@ -1,50 +1,3 @@
-//! # Mesh Export Utilities
-//!
-//! This module provides functionality to export meshes to glTF-compatible file formats.
-//! The implementation fully conforms to the glTF 2.0 specification, supporting both
-//! single meshes and scenes with multiple meshes and materials.
-//!
-//! ## Supported Formats
-//!
-//! - **GLB** (binary glTF): A compact binary format that contains both JSON and binary data
-//!
-//! ## Features
-//!
-//! - Export single meshes or complete scenes
-//! - Support for all vertex attributes (positions, normals, UVs, tangents, colors)
-//! - PBR materials with base color, metallic/roughness parameters, and emissive properties
-//! - Extension traits for easy use directly on Mesh and Scene objects
-//!
-//! ## Examples
-//!
-//! ```rust
-//! use mesh_tools::{Mesh, primitives::create_cube, export::{Material, GlbExportOptions}};
-//!
-//! // Create a cube mesh
-//! let cube = create_cube(1.0, 1.0, 1.0);
-//!
-//! // Create a material
-//! let material = Material {
-//!     name: "Red Material".to_string(),
-//!     base_color: [1.0, 0.0, 0.0],
-//!     metallic: 0.2,
-//!     roughness: 0.8,
-//!     emissive: [0.0, 0.0, 0.0],
-//! };
-//!
-//! // Configure export options
-//! let options = GlbExportOptions {
-//!     material,
-//!     export_normals: true,
-//!     export_uvs: true,
-//!     export_tangents: false,
-//!     export_colors: false,
-//!     name: "my_cube".to_string(),
-//! };
-//!
-//! // Export the mesh using the extension trait
-//! cube.export_glb_with_options("cube.glb", options).expect("Failed to export cube");
-//! ```
 
 use crate::{Mesh, MeshError, Scene};
 use std::fs::File;
@@ -55,86 +8,42 @@ use glam::{Vec2, Vec3, Vec4};
 use std::fmt::Write as FmtWrite;
 use serde_json;
 
-// GLB constants
-const GLB_MAGIC: u32 = 0x46546C67; // "glTF" in ASCII
-const GLB_VERSION: u32 = 2;
-const GLB_CHUNK_TYPE_JSON: u32 = 0x4E4F534A; // "JSON" in ASCII
-const GLB_CHUNK_TYPE_BIN: u32 = 0x004E4942; // "BIN\0" in ASCII
 
-/// Error types that can occur during mesh export
-///
-/// These errors cover issues related to file I/O, missing mesh attributes,
-/// invalid material configurations, and GLB format construction problems.
+const GLB_MAGIC: u32 = 0x46546C67; 
+const GLB_VERSION: u32 = 2;
+const GLB_CHUNK_TYPE_JSON: u32 = 0x4E4F534A; 
+const GLB_CHUNK_TYPE_BIN: u32 = 0x004E4942; 
+
 #[derive(thiserror::Error, Debug)]
 pub enum ExportError {
-    /// File I/O errors that occur during reading or writing
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
 
-    /// Missing vertex attributes required for the requested export format
     #[error("Mesh is missing required vertex attributes for export: {0}")]
     MissingAttributes(String),
 
-    /// Mesh-related error from the core mesh data structure
     #[error("Mesh error: {0}")]
     MeshError(#[from] MeshError),
 
-    /// Invalid material configuration such as out-of-range values
     #[error("Invalid material configuration: {0}")]
     InvalidMaterial(String),
 
-    /// Errors in constructing the GLB format such as chunk alignment issues
     #[error("GLB construction error: {0}")]
     GlbError(String),
 }
 
-/// Specialized result type for export operations
 pub type ExportResult<T> = Result<T, ExportError>;
 
-/// Represents a material with basic PBR (Physically Based Rendering) properties
-///
-/// This implements a simplified subset of the glTF 2.0 material specification, 
-/// including base color, metallic-roughness workflow, and emissive properties.
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::export::Material;
-///
-/// // Create a red, slightly metallic material
-/// let red_material = Material {
-///     name: "Red Metal".to_string(),
-///     base_color: [1.0, 0.0, 0.0],
-///     metallic: 0.7,
-///     roughness: 0.3,
-///     emissive: [0.0, 0.0, 0.0],
-/// };
-///
-/// // Create a glowing green material (non-metallic)
-/// let glowing_material = Material {
-///     name: "Glowing Green".to_string(),
-///     base_color: [0.2, 0.8, 0.2],
-///     metallic: 0.0,
-///     roughness: 0.5,
-///     emissive: [0.0, 0.3, 0.0],
-/// };
-/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Material {
-    /// Material name
     pub name: String,
-    /// Base color (RGB) with components in range [0.0, 1.0]
     pub base_color: [f32; 3],
-    /// Metallic factor in range [0.0, 1.0]
     pub metallic: f32,
-    /// Roughness factor in range [0.0, 1.0]
     pub roughness: f32,
-    /// Emissive color (RGB) with components in range [0.0, 1.0]
     pub emissive: [f32; 3],
 }
 
 impl Default for Material {
-    /// Returns a default material: a matte gray surface with no emission
     fn default() -> Self {
         Self {
             name: "Default Material".to_string(),
@@ -146,60 +55,17 @@ impl Default for Material {
     }
 }
 
-/// GLB export options for controlling which attributes are included and material properties
-///
-/// This allows fine-grained control over which vertex attributes are exported to the GLB file
-/// and what material is applied to the mesh.
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::export::{GlbExportOptions, Material};
-///
-/// // Basic options with default material, exporting only positions and normals
-/// let basic_options = GlbExportOptions {
-///     material: Material::default(),
-///     export_normals: true,
-///     export_uvs: false,
-///     export_tangents: false,
-///     export_colors: false,
-///     name: "basic_mesh".to_string(),
-/// };
-///
-/// // Full options with custom material and all attributes
-/// let complete_options = GlbExportOptions {
-///     material: Material {
-///         name: "Custom Material".to_string(),
-///         base_color: [0.1, 0.5, 0.9],
-///         metallic: 0.5,
-///         roughness: 0.5,
-///         emissive: [0.0, 0.0, 0.0],
-///     },
-///     export_normals: true,
-///     export_uvs: true,
-///     export_tangents: true,
-///     export_colors: true,
-///     name: "detailed_mesh".to_string(),
-/// };
-/// ```
 #[derive(Debug, Clone)]
 pub struct GlbExportOptions {
-    /// Material to apply to the mesh
     pub material: Material,
-    /// Whether to export normal vectors (if present in the mesh)
     pub export_normals: bool,
-    /// Whether to export texture coordinates (if present in the mesh)
     pub export_uvs: bool,
-    /// Whether to export tangent vectors (if present in the mesh)
     pub export_tangents: bool,
-    /// Whether to export vertex colors (if present in the mesh)
     pub export_colors: bool,
-    /// Name to use for the mesh in the GLB file
     pub name: String,
 }
 
 impl Default for GlbExportOptions {
-    /// Returns default export options with a default material and commonly used attributes
     fn default() -> Self {
         Self {
             material: Material::default(),
@@ -212,51 +78,8 @@ impl Default for GlbExportOptions {
     }
 }
 
-/// Exports a mesh to GLB (binary glTF) format
-///
-/// This function creates a GLB file containing a single mesh with the specified
-/// material and vertex attributes. The GLB file follows the glTF 2.0 specification
-/// and includes properly aligned JSON and binary chunks.
-///
-/// # Arguments
-///
-/// * `mesh` - The mesh to export
-/// * `path` - Path where the GLB file will be created
-/// * `options` - Options controlling which attributes to export and material properties
-///
-/// # Returns
-///
-/// `Ok(())` if the export was successful, or an `ExportError` if it failed
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::{primitives::create_sphere, export::{export_to_glb, GlbExportOptions, Material}};
-///
-/// // Create a sphere
-/// let sphere = create_sphere(1.0, 32, 16);
-///
-/// // Set up export options with a custom material
-/// let options = GlbExportOptions {
-///     material: Material {
-///         name: "Blue Material".to_string(),
-///         base_color: [0.0, 0.0, 1.0],
-///         metallic: 0.5,
-///         roughness: 0.5,
-///         emissive: [0.0, 0.0, 0.0],
-///     },
-///     export_normals: true,
-///     export_uvs: true,
-///     export_tangents: false,
-///     export_colors: false,
-///     name: "sphere".to_string(),
-/// };
-///
-/// // Export the sphere to a GLB file
-/// export_to_glb(&sphere, "sphere.glb", options).expect("Failed to export sphere");
-/// ```
 pub fn export_to_glb(mesh: &Mesh, path: impl AsRef<Path>, options: GlbExportOptions) -> ExportResult<()> {
-    // Check if mesh has required attributes based on options
+    
     if options.export_normals && !mesh.has_normals() {
         return Err(ExportError::MissingAttributes("Mesh doesn't have normals but export_normals is true".into()));
     }
@@ -279,10 +102,10 @@ pub fn export_to_glb(mesh: &Mesh, path: impl AsRef<Path>, options: GlbExportOpti
         }
     }
 
-    // Create binary buffer for vertex and index data
+    
     let mut bin_buffer = Vec::new();
     
-    // Add positions
+    
     let positions_byte_offset = 0;
     let positions_byte_length = mesh.vertices.len() * 3 * std::mem::size_of::<f32>();
     for vertex in &mesh.vertices {
@@ -291,7 +114,7 @@ pub fn export_to_glb(mesh: &Mesh, path: impl AsRef<Path>, options: GlbExportOpti
         bin_buffer.write_f32::<LittleEndian>(vertex.position.z)?;
     }
     
-    // Add normals if needed
+    
     let normals_byte_offset = if options.export_normals {
         let offset = bin_buffer.len();
         for vertex in &mesh.vertices {
@@ -311,11 +134,11 @@ pub fn export_to_glb(mesh: &Mesh, path: impl AsRef<Path>, options: GlbExportOpti
         0
     };
     
-    // Add UVs if needed
+    
     let uvs_byte_offset = if options.export_uvs {
         let offset = bin_buffer.len();
         for vertex in &mesh.vertices {
-            // UVs in glTF are Vec2, which matches our internal representation
+            
             let uv = vertex.uv.unwrap_or(Vec2::ZERO);
             bin_buffer.write_f32::<LittleEndian>(uv.x)?;
             bin_buffer.write_f32::<LittleEndian>(uv.y)?;
@@ -331,7 +154,7 @@ pub fn export_to_glb(mesh: &Mesh, path: impl AsRef<Path>, options: GlbExportOpti
         0
     };
     
-    // Add tangents if needed
+    
     let tangents_byte_offset = if options.export_tangents {
         let offset = bin_buffer.len();
         for vertex in &mesh.vertices {
@@ -352,7 +175,7 @@ pub fn export_to_glb(mesh: &Mesh, path: impl AsRef<Path>, options: GlbExportOpti
         0
     };
     
-    // Add colors if needed
+    
     let colors_byte_offset = if options.export_colors {
         let offset = bin_buffer.len();
         for vertex in &mesh.vertices {
@@ -360,10 +183,10 @@ pub fn export_to_glb(mesh: &Mesh, path: impl AsRef<Path>, options: GlbExportOpti
                 bin_buffer.write_f32::<LittleEndian>(color.x)?;
                 bin_buffer.write_f32::<LittleEndian>(color.y)?;
                 bin_buffer.write_f32::<LittleEndian>(color.z)?;
-                // Always write 1.0 for alpha since our colors are Vec3
+                
                 bin_buffer.write_f32::<LittleEndian>(1.0)?;
             } else {
-                // Default color (white)
+                
                 bin_buffer.write_f32::<LittleEndian>(1.0)?;
                 bin_buffer.write_f32::<LittleEndian>(1.0)?;
                 bin_buffer.write_f32::<LittleEndian>(1.0)?;
@@ -376,12 +199,12 @@ pub fn export_to_glb(mesh: &Mesh, path: impl AsRef<Path>, options: GlbExportOpti
     };
     
     let colors_byte_length = if options.export_colors {
-        mesh.vertices.len() * 4 * std::mem::size_of::<f32>() // RGBA
+        mesh.vertices.len() * 4 * std::mem::size_of::<f32>() 
     } else {
         0
     };
     
-    // Add indices (convert to u16 if possible, otherwise u32)
+    
     let use_u16_indices = mesh.vertices.len() <= 65535;
     let indices_byte_offset = bin_buffer.len();
     let indices_byte_length;
@@ -393,7 +216,7 @@ pub fn export_to_glb(mesh: &Mesh, path: impl AsRef<Path>, options: GlbExportOpti
                 bin_buffer.write_u16::<LittleEndian>(idx as u16)?;
             }
         }
-        5123 // GL.UNSIGNED_SHORT
+        5123 
     } else {
         indices_byte_length = mesh.triangles.len() * 3 * std::mem::size_of::<u32>();
         for triangle in &mesh.triangles {
@@ -401,15 +224,15 @@ pub fn export_to_glb(mesh: &Mesh, path: impl AsRef<Path>, options: GlbExportOpti
                 bin_buffer.write_u32::<LittleEndian>(idx as u32)?;
             }
         }
-        5125 // GL.UNSIGNED_INT
+        5125 
     };
 
-    // Ensure the binary buffer is aligned to 4 bytes
+    
     while bin_buffer.len() % 4 != 0 {
         bin_buffer.push(0);
     }
     
-    // Build the JSON part of the GLB
+    
     let json = build_gltf_json(
         &options,
         &mesh,
@@ -429,67 +252,42 @@ pub fn export_to_glb(mesh: &Mesh, path: impl AsRef<Path>, options: GlbExportOpti
         indices_component_type,
     );
     
-    // Pad JSON to multiple of 4 bytes
+    
     let mut padded_json = json.into_bytes();
     while padded_json.len() % 4 != 0 {
         padded_json.push(b' ');
     }
     
-    // Write GLB file
+    
     let file = File::create(path)?;
     let mut writer = std::io::BufWriter::new(file);
     
-    // GLB header
+    
     writer.write_u32::<LittleEndian>(GLB_MAGIC)?;
     writer.write_u32::<LittleEndian>(GLB_VERSION)?;
     
-    // Total length: header (12) + JSON chunk header (8) + JSON data + BIN chunk header (8) + BIN data
+    
     let total_length = 12 + 8 + padded_json.len() + 8 + bin_buffer.len();
     writer.write_u32::<LittleEndian>(total_length as u32)?;
     
-    // JSON chunk
+    
     writer.write_u32::<LittleEndian>(padded_json.len() as u32)?;
     writer.write_u32::<LittleEndian>(GLB_CHUNK_TYPE_JSON)?;
     writer.write_all(&padded_json)?;
     
-    // BIN chunk
+    
     writer.write_u32::<LittleEndian>(bin_buffer.len() as u32)?;
     writer.write_u32::<LittleEndian>(GLB_CHUNK_TYPE_BIN)?;
     writer.write_all(&bin_buffer)?;
     
-    // We don't have direct validation through the gltf crate, so we'll trust our implementation
+    
     
     Ok(())
 }
 
-/// Extension trait to add GLB export capabilities directly to Mesh
-///
-/// This trait adds methods to the `Mesh` type for exporting directly to GLB format,
-/// making it more convenient to use the export functionality.
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::{Mesh, primitives::create_cube, export::{ExportMesh, GlbExportOptions}};
-///
-/// // Create a cube
-/// let cube = create_cube(1.0, 1.0, 1.0);
-///
-/// // Export with default options
-/// cube.export_glb("cube.glb").expect("Failed to export cube");
-///
-/// // Or with custom options
-/// let options = GlbExportOptions {
-///     name: "custom_cube".to_string(),
-///     ..GlbExportOptions::default()
-/// };
-/// cube.export_glb_with_options("custom_cube.glb", options).expect("Failed to export cube");
-/// ```
 pub trait ExportMesh {
-    /// Export the mesh to GLB format with default options
     fn export_glb(&self, path: impl AsRef<Path>) -> ExportResult<()>;
     
-    /// Export the mesh to GLB format with custom options
     fn export_glb_with_options(&self, path: impl AsRef<Path>, options: GlbExportOptions) -> ExportResult<()>;
 }
 
@@ -503,39 +301,9 @@ impl ExportMesh for Mesh {
     }
 }
 
-/// Extension trait to add GLB export capabilities directly to Scene
-///
-/// This trait adds methods to the `Scene` type for exporting directly to GLB format,
-/// making it more convenient to export scenes containing multiple meshes.
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::{Mesh, Scene, primitives::{create_cube, create_sphere}, 
-///                  modifiers::translate_mesh, export::ExportScene};
-/// use glam::Vec3;
-///
-/// // Create a scene with multiple meshes
-/// let mut scene = Scene::new("My Scene");
-///
-/// // Add a cube
-/// let mut cube = create_cube(1.0, 1.0, 1.0);
-/// translate_mesh(&mut cube, Vec3::new(-2.0, 0.0, 0.0));
-/// scene.add_mesh(cube);
-///
-/// // Add a sphere
-/// let mut sphere = create_sphere(1.0, 16, 8);
-/// translate_mesh(&mut sphere, Vec3::new(2.0, 0.0, 0.0));
-/// scene.add_mesh(sphere);
-///
-/// // Export the scene
-/// scene.export_scene_glb("scene.glb").expect("Failed to export scene");
-/// ```
 pub trait ExportScene {
-    /// Export the scene to GLB format
     fn export_scene_glb(&self, path: impl AsRef<Path>) -> ExportResult<()>;
     
-    /// Export the scene to GLB format with custom options for meshes without materials
     fn export_scene_glb_with_options(&self, path: impl AsRef<Path>, options: GlbExportOptions) -> ExportResult<()>;
 }
 
@@ -549,126 +317,845 @@ impl ExportScene for Scene {
     }
 }
 
-/// Export a scene (multiple meshes with potentially different materials) to GLB format
-///
-/// This function exports a complete scene containing multiple meshes to a GLB file,
-/// preserving the materials assigned to each mesh and using default options for meshes
-/// without assigned materials.
-///
-/// # Arguments
-///
-/// * `scene` - The scene to export
-/// * `path` - Path where the GLB file will be created
-///
-/// # Returns
-///
-/// `Ok(())` if the export was successful, or an `ExportError` if it failed
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::{Scene, primitives::{create_cube, create_sphere},
-///                  modifiers::translate_mesh, export::{export_scene_to_glb, Material}};
-/// use glam::Vec3;
-///
-/// // Create a scene
-/// let mut scene = Scene::new("Multi-Object Scene");
-///
-/// // Add a cube with a red material
-/// let mut cube = create_cube(1.0, 1.0, 1.0);
-/// cube.material = Some(Material {
-///     name: "Red Material".to_string(),
-///     base_color: [1.0, 0.0, 0.0],
-///     metallic: 0.0,
-///     roughness: 0.9,
-///     emissive: [0.0, 0.0, 0.0],
-/// });
-/// translate_mesh(&mut cube, Vec3::new(-2.0, 0.0, 0.0));
-/// scene.add_mesh(cube);
-///
-/// // Add a sphere with a blue material
-/// let mut sphere = create_sphere(1.0, 16, 8);
-/// sphere.material = Some(Material {
-///     name: "Blue Material".to_string(),
-///     base_color: [0.0, 0.0, 1.0],
-///     metallic: 0.7,
-///     roughness: 0.3,
-///     emissive: [0.0, 0.0, 0.0],
-/// });
-/// translate_mesh(&mut sphere, Vec3::new(2.0, 0.0, 0.0));
-/// scene.add_mesh(sphere);
-///
-/// // Export the scene
-/// export_scene_to_glb(&scene, "multi_material_scene.glb").expect("Failed to export scene");
-/// ```
 pub fn export_scene_to_glb(scene: &Scene, path: impl AsRef<Path>) -> ExportResult<()> {
     export_scene_to_glb_with_options(scene, path, GlbExportOptions::default())
 }
 
-/// Export a scene to GLB format with custom options (for meshes without materials)
-///
-/// This function exports a complete scene containing multiple meshes to a GLB file,
-/// using the provided options as defaults for meshes that don't have materials assigned.
-///
-/// # Arguments
-///
-/// * `scene` - The scene to export
-/// * `path` - Path where the GLB file will be created
-/// * `default_options` - Default options for meshes without assigned materials
-///
-/// # Returns
-///
-/// `Ok(())` if the export was successful, or an `ExportError` if it failed
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::{Scene, primitives::{create_cube, create_sphere},
-///                 export::{export_scene_to_glb_with_options, GlbExportOptions, Material}};
-///
-/// // Create a scene
-/// let mut scene = Scene::new("Mixed Scene");
-///
-/// // Add meshes (some with materials, some without)
-/// let cube = create_cube(1.0, 1.0, 1.0);
-/// let mut sphere = create_sphere(1.0, 16, 8);
-/// 
-/// // Only the sphere has a material
-/// sphere.material = Some(Material {
-///     name: "Green Material".to_string(),
-///     base_color: [0.0, 1.0, 0.0],
-///     metallic: 0.5,
-///     roughness: 0.5,
-///     emissive: [0.0, 0.0, 0.0],
-/// });
-///
-/// scene.add_mesh(cube);
-/// scene.add_mesh(sphere);
-///
-/// // Define default options for meshes without materials (the cube)
-/// let default_options = GlbExportOptions {
-///     material: Material {
-///         name: "Default Yellow".to_string(),
-///         base_color: [1.0, 1.0, 0.0],
-///         metallic: 0.0,
-///         roughness: 1.0,
-///         emissive: [0.0, 0.0, 0.0],
-///     },
-///     export_normals: true,
-///     export_uvs: true,
-///     export_tangents: false,
-///     export_colors: false,
-///     name: "default".to_string(),
-/// };
-///
-/// // Export the scene with the default options
-/// export_scene_to_glb_with_options(&scene, "mixed_scene.glb", default_options)
-///     .expect("Failed to export scene");
-/// ```
 pub fn export_scene_to_glb_with_options(
     scene: &Scene, 
     path: impl AsRef<Path>,
     default_options: GlbExportOptions
 ) -> ExportResult<()> {
-    // Function implementation remains unchanged...
+    let file = File::create(path.as_ref())?;
+    let mut writer = std::io::BufWriter::new(file);
+    
+    
+    let mut bin_buffer = Vec::new();
+    let mut mesh_export_info = Vec::new();
+    let mut materials = Vec::new();
+    
+    
+    for (i, mesh) in scene.meshes.iter().enumerate() {
+        
+        let material = if let Some(mesh_material) = mesh.get_material() {
+            mesh_material.clone()
+        } else {
+            default_options.material.clone()
+        };
+        
+        
+        let positions_byte_offset = bin_buffer.len();
+        let positions_byte_length = mesh.vertices.len() * 3 * 4; 
+        
+        
+        let mut min_pos = Vec3::new(f32::MAX, f32::MAX, f32::MAX);
+        let mut max_pos = Vec3::new(f32::MIN, f32::MIN, f32::MIN);
+        
+        for vertex in &mesh.vertices {
+            min_pos = min_pos.min(vertex.position);
+            max_pos = max_pos.max(vertex.position);
+            
+            
+            bin_buffer.write_f32::<LittleEndian>(vertex.position.x)?;
+            bin_buffer.write_f32::<LittleEndian>(vertex.position.y)?;
+            bin_buffer.write_f32::<LittleEndian>(vertex.position.z)?;
+        }
+        
+        
+        let normals_byte_offset = bin_buffer.len();
+        let normals_byte_length = if default_options.export_normals {
+            let start_len = bin_buffer.len();
+            for vertex in &mesh.vertices {
+                let normal = vertex.normal.unwrap_or(Vec3::Y);
+                bin_buffer.write_f32::<LittleEndian>(normal.x)?;
+                bin_buffer.write_f32::<LittleEndian>(normal.y)?;
+                bin_buffer.write_f32::<LittleEndian>(normal.z)?;
+            }
+            bin_buffer.len() - start_len
+        } else {
+            0
+        };
+        
+        
+        let uvs_byte_offset = bin_buffer.len();
+        let uvs_byte_length = if default_options.export_uvs {
+            let start_len = bin_buffer.len();
+            for vertex in &mesh.vertices {
+                let uv = vertex.uv.unwrap_or(Vec2::ZERO);
+                bin_buffer.write_f32::<LittleEndian>(uv.x)?;
+                bin_buffer.write_f32::<LittleEndian>(uv.y)?;
+            }
+            bin_buffer.len() - start_len
+        } else {
+            0
+        };
+        
+        
+        let tangents_byte_offset = bin_buffer.len();
+        let tangents_byte_length = if default_options.export_tangents {
+            let start_len = bin_buffer.len();
+            for vertex in &mesh.vertices {
+                let tangent = vertex.tangent.unwrap_or(Vec4::new(1.0, 0.0, 0.0, 1.0));
+                bin_buffer.write_f32::<LittleEndian>(tangent.x)?;
+                bin_buffer.write_f32::<LittleEndian>(tangent.y)?;
+                bin_buffer.write_f32::<LittleEndian>(tangent.z)?;
+                bin_buffer.write_f32::<LittleEndian>(tangent.w)?;
+            }
+            bin_buffer.len() - start_len
+        } else {
+            0
+        };
+        
+        
+        let colors_byte_offset = bin_buffer.len();
+        let colors_byte_length = if default_options.export_colors {
+            let start_len = bin_buffer.len();
+            for vertex in &mesh.vertices {
+                if let Some(color) = vertex.color {
+                    bin_buffer.write_f32::<LittleEndian>(color.x)?;
+                    bin_buffer.write_f32::<LittleEndian>(color.y)?;
+                    bin_buffer.write_f32::<LittleEndian>(color.z)?;
+                    
+                    bin_buffer.write_f32::<LittleEndian>(1.0)?;
+                } else {
+                    
+                    bin_buffer.write_f32::<LittleEndian>(1.0)?;
+                    bin_buffer.write_f32::<LittleEndian>(1.0)?;
+                    bin_buffer.write_f32::<LittleEndian>(1.0)?;
+                    bin_buffer.write_f32::<LittleEndian>(1.0)?;
+                }
+            }
+            bin_buffer.len() - start_len
+        } else {
+            0
+        };
+        
+        
+        let indices_byte_offset = bin_buffer.len();
+        let indices_count = mesh.triangles.len() * 3;
+        
+        for triangle in &mesh.triangles {
+            bin_buffer.write_u32::<LittleEndian>(triangle.indices[0] as u32)?;
+            bin_buffer.write_u32::<LittleEndian>(triangle.indices[1] as u32)?;
+            bin_buffer.write_u32::<LittleEndian>(triangle.indices[2] as u32)?;
+        }
+        
+        let indices_byte_length = mesh.triangles.len() * 3 * 4; 
+        
+        
+        mesh_export_info.push(MeshExportInfo {
+            name: format!("Mesh_{}", i),
+            vertex_count: mesh.vertices.len(),
+            index_count: indices_count,
+            material_index: i,
+            positions_byte_offset,
+            positions_byte_length,
+            normals_byte_offset,
+            normals_byte_length,
+            uvs_byte_offset,
+            uvs_byte_length,
+            tangents_byte_offset,
+            tangents_byte_length,
+            colors_byte_offset,
+            colors_byte_length,
+            indices_byte_offset,
+            indices_byte_length,
+            min_pos,
+            max_pos,
+        });
+        
+        
+        materials.push(material);
+    }
+    
+    
+    while bin_buffer.len() % 4 != 0 {
+        bin_buffer.push(0);
+    }
+    
+    
+    let json = build_multi_mesh_gltf_json(&scene.name, &mesh_export_info, &materials, bin_buffer.len());
+    
+    
+    let mut padded_json = json.into_bytes();
+    while padded_json.len() % 4 != 0 {
+        padded_json.push(b' ');
+    }
+    
+    
+    writer.write_u32::<LittleEndian>(GLB_MAGIC)?;
+    writer.write_u32::<LittleEndian>(GLB_VERSION)?;
+    
+    
+    
+    let total_length = 12 + 8 + padded_json.len() + 8 + bin_buffer.len();
+    writer.write_u32::<LittleEndian>(total_length as u32)?;
+    
+    
+    writer.write_u32::<LittleEndian>(padded_json.len() as u32)?;
+    writer.write_u32::<LittleEndian>(GLB_CHUNK_TYPE_JSON)?;
+    writer.write_all(&padded_json)?;
+    
+    
+    writer.write_u32::<LittleEndian>(bin_buffer.len() as u32)?;
+    writer.write_u32::<LittleEndian>(GLB_CHUNK_TYPE_BIN)?;
+    writer.write_all(&bin_buffer)?;
+    
+    
+    writer.flush()?;
+    Ok(())
+}
+
+fn build_gltf_json(
+    options: &GlbExportOptions,
+    mesh: &Mesh,
+    buffer_length: usize,
+    positions_byte_offset: usize,
+    positions_byte_length: usize,
+    normals_byte_offset: usize,
+    normals_byte_length: usize,
+    uvs_byte_offset: usize,
+    uvs_byte_length: usize,
+    tangents_byte_offset: usize,
+    tangents_byte_length: usize,
+    colors_byte_offset: usize,
+    colors_byte_length: usize,
+    indices_byte_offset: usize,
+    indices_byte_length: usize,
+    indices_component_type: u32,
+) -> String {
+    let mut json_obj = serde_json::Map::new();
+    
+    
+    let mut asset = serde_json::Map::new();
+    asset.insert("version".to_string(), serde_json::Value::String("2.0".to_string()));
+    asset.insert("generator".to_string(), serde_json::Value::String("mesh-tools GLB exporter".to_string()));
+    json_obj.insert("asset".to_string(), serde_json::Value::Object(asset));
+    
+    
+    json_obj.insert("scene".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+    
+    
+    let mut scene_obj = serde_json::Map::new();
+    scene_obj.insert("nodes".to_string(), serde_json::Value::Array(vec![serde_json::Value::Number(serde_json::Number::from(0))]));
+    json_obj.insert("scenes".to_string(), serde_json::Value::Array(vec![serde_json::Value::Object(scene_obj)]));
+    
+    
+    let mut node = serde_json::Map::new();
+    node.insert("mesh".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+    node.insert("name".to_string(), serde_json::Value::String(options.name.clone()));
+    json_obj.insert("nodes".to_string(), serde_json::Value::Array(vec![serde_json::Value::Object(node)]));
+    
+    
+    let mut mesh_obj = serde_json::Map::new();
+    mesh_obj.insert("name".to_string(), serde_json::Value::String(options.name.clone()));
+    
+    
+    let mut primitive = serde_json::Map::new();
+    
+    
+    let mut attributes = serde_json::Map::new();
+    
+    
+    attributes.insert("POSITION".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+    
+    
+    let mut next_accessor_index = 1;
+    
+    if normals_byte_length > 0 {
+        attributes.insert("NORMAL".to_string(), serde_json::Value::Number(serde_json::Number::from(next_accessor_index)));
+        next_accessor_index += 1;
+    }
+    
+    if uvs_byte_length > 0 {
+        attributes.insert("TEXCOORD_0".to_string(), serde_json::Value::Number(serde_json::Number::from(next_accessor_index)));
+        next_accessor_index += 1;
+    }
+    
+    if tangents_byte_length > 0 {
+        attributes.insert("TANGENT".to_string(), serde_json::Value::Number(serde_json::Number::from(next_accessor_index)));
+        next_accessor_index += 1;
+    }
+    
+    if colors_byte_length > 0 {
+        attributes.insert("COLOR_0".to_string(), serde_json::Value::Number(serde_json::Number::from(next_accessor_index)));
+        next_accessor_index += 1;
+    }
+    
+    primitive.insert("attributes".to_string(), serde_json::Value::Object(attributes));
+    
+    
+    primitive.insert("indices".to_string(), serde_json::Value::Number(serde_json::Number::from(next_accessor_index)));
+    
+    
+    primitive.insert("material".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+    
+    
+    primitive.insert("mode".to_string(), serde_json::Value::Number(serde_json::Number::from(4)));
+    
+    mesh_obj.insert("primitives".to_string(), serde_json::Value::Array(vec![serde_json::Value::Object(primitive)]));
+    json_obj.insert("meshes".to_string(), serde_json::Value::Array(vec![serde_json::Value::Object(mesh_obj)]));
+    
+    
+    let mut material = serde_json::Map::new();
+    material.insert("name".to_string(), serde_json::Value::String(options.material.name.clone()));
+    
+    
+    let mut pbr = serde_json::Map::new();
+    
+    
+    let base_color_factor = vec![
+        serde_json::Value::Number(serde_json::Number::from_f64(options.material.base_color[0] as f64).unwrap()),
+        serde_json::Value::Number(serde_json::Number::from_f64(options.material.base_color[1] as f64).unwrap()),
+        serde_json::Value::Number(serde_json::Number::from_f64(options.material.base_color[2] as f64).unwrap()),
+        serde_json::Value::Number(serde_json::Number::from_f64(1.0).unwrap()), 
+    ];
+    pbr.insert("baseColorFactor".to_string(), serde_json::Value::Array(base_color_factor));
+    
+    
+    pbr.insert("metallicFactor".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(options.material.metallic as f64).unwrap()));
+    
+    
+    pbr.insert("roughnessFactor".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(options.material.roughness as f64).unwrap()));
+    
+    material.insert("pbrMetallicRoughness".to_string(), serde_json::Value::Object(pbr));
+    
+    
+    let emissive_factor = vec![
+        serde_json::Value::Number(serde_json::Number::from_f64(options.material.emissive[0] as f64).unwrap()),
+        serde_json::Value::Number(serde_json::Number::from_f64(options.material.emissive[1] as f64).unwrap()),
+        serde_json::Value::Number(serde_json::Number::from_f64(options.material.emissive[2] as f64).unwrap()),
+    ];
+    material.insert("emissiveFactor".to_string(), serde_json::Value::Array(emissive_factor));
+    
+    
+    material.insert("doubleSided".to_string(), serde_json::Value::Bool(true));
+    
+    json_obj.insert("materials".to_string(), serde_json::Value::Array(vec![serde_json::Value::Object(material)]));
+    
+    
+    let mut accessors = Vec::new();
+    
+    
+    let mut position_accessor = serde_json::Map::new();
+    position_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+    position_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(5126))); 
+    position_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(mesh.vertices.len())));
+    position_accessor.insert("type".to_string(), serde_json::Value::String("VEC3".to_string()));
+    
+    
+    let mut min_pos = [f32::MAX, f32::MAX, f32::MAX];
+    let mut max_pos = [f32::MIN, f32::MIN, f32::MIN];
+    
+    for vertex in &mesh.vertices {
+        min_pos[0] = min_pos[0].min(vertex.position.x);
+        min_pos[1] = min_pos[1].min(vertex.position.y);
+        min_pos[2] = min_pos[2].min(vertex.position.z);
+        
+        max_pos[0] = max_pos[0].max(vertex.position.x);
+        max_pos[1] = max_pos[1].max(vertex.position.y);
+        max_pos[2] = max_pos[2].max(vertex.position.z);
+    }
+    
+    let min = vec![
+        serde_json::Value::Number(serde_json::Number::from_f64(min_pos[0] as f64).unwrap()),
+        serde_json::Value::Number(serde_json::Number::from_f64(min_pos[1] as f64).unwrap()),
+        serde_json::Value::Number(serde_json::Number::from_f64(min_pos[2] as f64).unwrap()),
+    ];
+    
+    let max = vec![
+        serde_json::Value::Number(serde_json::Number::from_f64(max_pos[0] as f64).unwrap()),
+        serde_json::Value::Number(serde_json::Number::from_f64(max_pos[1] as f64).unwrap()),
+        serde_json::Value::Number(serde_json::Number::from_f64(max_pos[2] as f64).unwrap()),
+    ];
+    
+    position_accessor.insert("min".to_string(), serde_json::Value::Array(min));
+    position_accessor.insert("max".to_string(), serde_json::Value::Array(max));
+    
+    accessors.push(serde_json::Value::Object(position_accessor));
+    
+    
+    if normals_byte_length > 0 {
+        let mut normal_accessor = serde_json::Map::new();
+        normal_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(1)));
+        normal_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(5126))); 
+        normal_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(mesh.vertices.len())));
+        normal_accessor.insert("type".to_string(), serde_json::Value::String("VEC3".to_string()));
+        accessors.push(serde_json::Value::Object(normal_accessor));
+    }
+    
+    
+    if uvs_byte_length > 0 {
+        let mut uv_accessor = serde_json::Map::new();
+        uv_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(if normals_byte_length > 0 { 2 } else { 1 })));
+        uv_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(5126))); 
+        uv_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(mesh.vertices.len())));
+        uv_accessor.insert("type".to_string(), serde_json::Value::String("VEC2".to_string()));
+        accessors.push(serde_json::Value::Object(uv_accessor));
+    }
+    
+    
+    if tangents_byte_length > 0 {
+        let mut tangent_accessor = serde_json::Map::new();
+        
+        
+        let buffer_view_index = 1 + 
+            (if normals_byte_length > 0 { 1 } else { 0 }) + 
+            (if uvs_byte_length > 0 { 1 } else { 0 });
+        
+        tangent_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(buffer_view_index)));
+        tangent_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(5126))); 
+        tangent_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(mesh.vertices.len())));
+        tangent_accessor.insert("type".to_string(), serde_json::Value::String("VEC4".to_string()));
+        accessors.push(serde_json::Value::Object(tangent_accessor));
+    }
+    
+    
+    if colors_byte_length > 0 {
+        let mut color_accessor = serde_json::Map::new();
+        
+        
+        let buffer_view_index = 1 + 
+            (if normals_byte_length > 0 { 1 } else { 0 }) + 
+            (if uvs_byte_length > 0 { 1 } else { 0 }) + 
+            (if tangents_byte_length > 0 { 1 } else { 0 });
+        
+        color_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(buffer_view_index)));
+        color_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(5126))); 
+        color_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(mesh.vertices.len())));
+        color_accessor.insert("type".to_string(), serde_json::Value::String("VEC4".to_string()));
+        color_accessor.insert("normalized".to_string(), serde_json::Value::Bool(true));
+        accessors.push(serde_json::Value::Object(color_accessor));
+    }
+    
+    
+    let mut indices_accessor = serde_json::Map::new();
+    
+    
+    let buffer_view_index = 1 + 
+        (if normals_byte_length > 0 { 1 } else { 0 }) + 
+        (if uvs_byte_length > 0 { 1 } else { 0 }) + 
+        (if tangents_byte_length > 0 { 1 } else { 0 }) + 
+        (if colors_byte_length > 0 { 1 } else { 0 });
+    
+    indices_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(buffer_view_index)));
+    indices_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(indices_component_type)));
+    indices_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(mesh.triangles.len() * 3)));
+    indices_accessor.insert("type".to_string(), serde_json::Value::String("SCALAR".to_string()));
+    
+    accessors.push(serde_json::Value::Object(indices_accessor));
+    
+    json_obj.insert("accessors".to_string(), serde_json::Value::Array(accessors));
+    
+    
+    let mut buffer_views = Vec::new();
+    
+    
+    let mut position_view = serde_json::Map::new();
+    position_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+    position_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(positions_byte_offset)));
+    position_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(positions_byte_length)));
+    position_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34962))); 
+    buffer_views.push(serde_json::Value::Object(position_view));
+    
+    
+    if normals_byte_length > 0 {
+        let mut normal_view = serde_json::Map::new();
+        normal_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+        normal_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(normals_byte_offset)));
+        normal_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(normals_byte_length)));
+        normal_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34962))); 
+        buffer_views.push(serde_json::Value::Object(normal_view));
+    }
+    
+    
+    if uvs_byte_length > 0 {
+        let mut uv_view = serde_json::Map::new();
+        uv_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+        uv_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(uvs_byte_offset)));
+        uv_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(uvs_byte_length)));
+        uv_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34962))); 
+        buffer_views.push(serde_json::Value::Object(uv_view));
+    }
+    
+    
+    if tangents_byte_length > 0 {
+        let mut tangent_view = serde_json::Map::new();
+        tangent_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+        tangent_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(tangents_byte_offset)));
+        tangent_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(tangents_byte_length)));
+        tangent_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34962))); 
+        buffer_views.push(serde_json::Value::Object(tangent_view));
+    }
+    
+    
+    if colors_byte_length > 0 {
+        let mut color_view = serde_json::Map::new();
+        color_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+        color_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(colors_byte_offset)));
+        color_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(colors_byte_length)));
+        color_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34962))); 
+        buffer_views.push(serde_json::Value::Object(color_view));
+    }
+    
+    
+    let mut indices_view = serde_json::Map::new();
+    indices_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+    indices_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(indices_byte_offset)));
+    indices_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(indices_byte_length)));
+    indices_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34963))); 
+    buffer_views.push(serde_json::Value::Object(indices_view));
+    
+    json_obj.insert("bufferViews".to_string(), serde_json::Value::Array(buffer_views));
+    
+    
+    let mut buffer = serde_json::Map::new();
+    buffer.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(buffer_length)));
+    json_obj.insert("buffers".to_string(), serde_json::Value::Array(vec![serde_json::Value::Object(buffer)]));
+    
+    
+    serde_json::to_string(&serde_json::Value::Object(json_obj)).unwrap_or_else(|_| "{}".to_string())
+}
+
+fn build_multi_mesh_gltf_json(
+    scene_name: &str,
+    mesh_export_info: &[MeshExportInfo],
+    materials: &[Material],
+    buffer_length: usize,
+) -> String {
+    let mut json_obj = serde_json::Map::new();
+    
+    
+    let mut asset = serde_json::Map::new();
+    asset.insert("version".to_string(), serde_json::Value::String("2.0".to_string()));
+    asset.insert("generator".to_string(), serde_json::Value::String("mesh-tools GLB exporter".to_string()));
+    json_obj.insert("asset".to_string(), serde_json::Value::Object(asset));
+    
+    
+    json_obj.insert("scene".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+    
+    
+    let mut scene_obj = serde_json::Map::new();
+    scene_obj.insert("name".to_string(), serde_json::Value::String(scene_name.to_string()));
+    
+    
+    let node_indices: Vec<serde_json::Value> = (0..mesh_export_info.len())
+        .map(|i| serde_json::Value::Number(serde_json::Number::from(i)))
+        .collect();
+    
+    scene_obj.insert("nodes".to_string(), serde_json::Value::Array(node_indices));
+    json_obj.insert("scenes".to_string(), serde_json::Value::Array(vec![serde_json::Value::Object(scene_obj)]));
+    
+    
+    let mut nodes = Vec::new();
+    for (i, info) in mesh_export_info.iter().enumerate() {
+        let mut node = serde_json::Map::new();
+        node.insert("mesh".to_string(), serde_json::Value::Number(serde_json::Number::from(i)));
+        node.insert("name".to_string(), serde_json::Value::String(info.name.clone()));
+        nodes.push(serde_json::Value::Object(node));
+    }
+    json_obj.insert("nodes".to_string(), serde_json::Value::Array(nodes));
+    
+    
+    let mut meshes = Vec::new();
+    for (i, info) in mesh_export_info.iter().enumerate() {
+        let mut mesh = serde_json::Map::new();
+        mesh.insert("name".to_string(), serde_json::Value::String(info.name.clone()));
+        
+        
+        let mut primitive = serde_json::Map::new();
+        
+        
+        let mut attributes = serde_json::Map::new();
+        
+        
+        attributes.insert("POSITION".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+        
+        
+        let mut next_accessor_index = 1;
+        
+        if info.normals_byte_length > 0 {
+            attributes.insert("NORMAL".to_string(), serde_json::Value::Number(serde_json::Number::from(next_accessor_index)));
+            next_accessor_index += 1;
+        }
+        
+        if info.uvs_byte_length > 0 {
+            attributes.insert("TEXCOORD_0".to_string(), serde_json::Value::Number(serde_json::Number::from(next_accessor_index)));
+            next_accessor_index += 1;
+        }
+        
+        if info.tangents_byte_length > 0 {
+            attributes.insert("TANGENT".to_string(), serde_json::Value::Number(serde_json::Number::from(next_accessor_index)));
+            next_accessor_index += 1;
+        }
+        
+        if info.colors_byte_length > 0 {
+            attributes.insert("COLOR_0".to_string(), serde_json::Value::Number(serde_json::Number::from(next_accessor_index)));
+            next_accessor_index += 1;
+        }
+        
+        primitive.insert("attributes".to_string(), serde_json::Value::Object(attributes));
+        
+        
+        primitive.insert("indices".to_string(), serde_json::Value::Number(serde_json::Number::from(next_accessor_index)));
+        
+        
+        primitive.insert("material".to_string(), serde_json::Value::Number(serde_json::Number::from(info.material_index)));
+        
+        
+        primitive.insert("mode".to_string(), serde_json::Value::Number(serde_json::Number::from(4)));
+        
+        mesh.insert("primitives".to_string(), serde_json::Value::Array(vec![serde_json::Value::Object(primitive)]));
+        meshes.push(serde_json::Value::Object(mesh));
+    }
+    json_obj.insert("meshes".to_string(), serde_json::Value::Array(meshes));
+    
+    
+    let mut materials_json = Vec::new();
+    for material in materials {
+        let mut material_json = serde_json::Map::new();
+        material_json.insert("name".to_string(), serde_json::Value::String(material.name.clone()));
+        
+        
+        let mut pbr = serde_json::Map::new();
+        
+        
+        let base_color_factor = vec![
+            serde_json::Value::Number(serde_json::Number::from_f64(material.base_color[0] as f64).unwrap()),
+            serde_json::Value::Number(serde_json::Number::from_f64(material.base_color[1] as f64).unwrap()),
+            serde_json::Value::Number(serde_json::Number::from_f64(material.base_color[2] as f64).unwrap()),
+            serde_json::Value::Number(serde_json::Number::from_f64(1.0).unwrap()), 
+        ];
+        pbr.insert("baseColorFactor".to_string(), serde_json::Value::Array(base_color_factor));
+        
+        
+        pbr.insert("metallicFactor".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(material.metallic as f64).unwrap()));
+        
+        
+        pbr.insert("roughnessFactor".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(material.roughness as f64).unwrap()));
+        
+        material_json.insert("pbrMetallicRoughness".to_string(), serde_json::Value::Object(pbr));
+        
+        
+        let emissive_factor = vec![
+            serde_json::Value::Number(serde_json::Number::from_f64(material.emissive[0] as f64).unwrap()),
+            serde_json::Value::Number(serde_json::Number::from_f64(material.emissive[1] as f64).unwrap()),
+            serde_json::Value::Number(serde_json::Number::from_f64(material.emissive[2] as f64).unwrap()),
+        ];
+        material_json.insert("emissiveFactor".to_string(), serde_json::Value::Array(emissive_factor));
+        
+        
+        material_json.insert("doubleSided".to_string(), serde_json::Value::Bool(true));
+        
+        materials_json.push(serde_json::Value::Object(material_json));
+    }
+    json_obj.insert("materials".to_string(), serde_json::Value::Array(materials_json));
+    
+    
+    let mut accessors = Vec::new();
+    let mut next_accessor_index = 0;
+    
+    for info in mesh_export_info {
+        
+        let mut position_accessor = serde_json::Map::new();
+        position_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+        position_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(5126))); 
+        position_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(info.vertex_count)));
+        position_accessor.insert("type".to_string(), serde_json::Value::String("VEC3".to_string()));
+        
+        
+        let min = vec![
+            serde_json::Value::Number(serde_json::Number::from_f64(info.min_pos.x as f64).unwrap()),
+            serde_json::Value::Number(serde_json::Number::from_f64(info.min_pos.y as f64).unwrap()),
+            serde_json::Value::Number(serde_json::Number::from_f64(info.min_pos.z as f64).unwrap()),
+        ];
+        
+        let max = vec![
+            serde_json::Value::Number(serde_json::Number::from_f64(info.max_pos.x as f64).unwrap()),
+            serde_json::Value::Number(serde_json::Number::from_f64(info.max_pos.y as f64).unwrap()),
+            serde_json::Value::Number(serde_json::Number::from_f64(info.max_pos.z as f64).unwrap()),
+        ];
+        
+        position_accessor.insert("min".to_string(), serde_json::Value::Array(min));
+        position_accessor.insert("max".to_string(), serde_json::Value::Array(max));
+        
+        accessors.push(serde_json::Value::Object(position_accessor));
+        
+        
+        if info.normals_byte_length > 0 {
+            let mut normal_accessor = serde_json::Map::new();
+            normal_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(1)));
+            normal_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(5126))); 
+            normal_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(info.vertex_count)));
+            normal_accessor.insert("type".to_string(), serde_json::Value::String("VEC3".to_string()));
+            accessors.push(serde_json::Value::Object(normal_accessor));
+        }
+        
+        
+        if info.uvs_byte_length > 0 {
+            let mut uv_accessor = serde_json::Map::new();
+            uv_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(if info.normals_byte_length > 0 { 2 } else { 1 })));
+            uv_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(5126))); 
+            uv_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(info.vertex_count)));
+            uv_accessor.insert("type".to_string(), serde_json::Value::String("VEC2".to_string()));
+            accessors.push(serde_json::Value::Object(uv_accessor));
+        }
+        
+        
+        if info.tangents_byte_length > 0 {
+            let mut tangent_accessor = serde_json::Map::new();
+            
+            
+            let buffer_view_index = 1 + 
+                (if info.normals_byte_length > 0 { 1 } else { 0 }) + 
+                (if info.uvs_byte_length > 0 { 1 } else { 0 });
+            
+            tangent_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(buffer_view_index)));
+            tangent_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(5126))); 
+            tangent_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(info.vertex_count)));
+            tangent_accessor.insert("type".to_string(), serde_json::Value::String("VEC4".to_string()));
+            accessors.push(serde_json::Value::Object(tangent_accessor));
+        }
+        
+        
+        if info.colors_byte_length > 0 {
+            let mut color_accessor = serde_json::Map::new();
+            
+            
+            let buffer_view_index = 1 + 
+                (if info.normals_byte_length > 0 { 1 } else { 0 }) + 
+                (if info.uvs_byte_length > 0 { 1 } else { 0 }) + 
+                (if info.tangents_byte_length > 0 { 1 } else { 0 });
+            
+            color_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(buffer_view_index)));
+            color_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(5126))); 
+            color_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(info.vertex_count)));
+            color_accessor.insert("type".to_string(), serde_json::Value::String("VEC4".to_string()));
+            color_accessor.insert("normalized".to_string(), serde_json::Value::Bool(true));
+            accessors.push(serde_json::Value::Object(color_accessor));
+        }
+        
+        
+        let mut indices_accessor = serde_json::Map::new();
+        
+        
+        let buffer_view_index = 1 + 
+            (if info.normals_byte_length > 0 { 1 } else { 0 }) + 
+            (if info.uvs_byte_length > 0 { 1 } else { 0 }) + 
+            (if info.tangents_byte_length > 0 { 1 } else { 0 }) + 
+            (if info.colors_byte_length > 0 { 1 } else { 0 });
+        
+        indices_accessor.insert("bufferView".to_string(), serde_json::Value::Number(serde_json::Number::from(buffer_view_index)));
+        indices_accessor.insert("componentType".to_string(), serde_json::Value::Number(serde_json::Number::from(5125))); 
+        indices_accessor.insert("count".to_string(), serde_json::Value::Number(serde_json::Number::from(info.index_count)));
+        indices_accessor.insert("type".to_string(), serde_json::Value::String("SCALAR".to_string()));
+        
+        accessors.push(serde_json::Value::Object(indices_accessor));
+        
+        next_accessor_index += 1 + 
+            (if info.normals_byte_length > 0 { 1 } else { 0 }) + 
+            (if info.uvs_byte_length > 0 { 1 } else { 0 }) + 
+            (if info.tangents_byte_length > 0 { 1 } else { 0 }) + 
+            (if info.colors_byte_length > 0 { 1 } else { 0 }) + 1;
+    }
+    json_obj.insert("accessors".to_string(), serde_json::Value::Array(accessors));
+    
+    
+    let mut buffer_views = Vec::new();
+    let mut next_buffer_view_index = 0;
+    
+    for info in mesh_export_info {
+        
+        let mut position_view = serde_json::Map::new();
+        position_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+        position_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(info.positions_byte_offset)));
+        position_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(info.positions_byte_length)));
+        position_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34962))); 
+        buffer_views.push(serde_json::Value::Object(position_view));
+        
+        
+        if info.normals_byte_length > 0 {
+            let mut normal_view = serde_json::Map::new();
+            normal_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+            normal_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(info.normals_byte_offset)));
+            normal_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(info.normals_byte_length)));
+            normal_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34962))); 
+            buffer_views.push(serde_json::Value::Object(normal_view));
+        }
+        
+        
+        if info.uvs_byte_length > 0 {
+            let mut uv_view = serde_json::Map::new();
+            uv_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+            uv_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(info.uvs_byte_offset)));
+            uv_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(info.uvs_byte_length)));
+            uv_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34962))); 
+            buffer_views.push(serde_json::Value::Object(uv_view));
+        }
+        
+        
+        if info.tangents_byte_length > 0 {
+            let mut tangent_view = serde_json::Map::new();
+            tangent_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+            tangent_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(info.tangents_byte_offset)));
+            tangent_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(info.tangents_byte_length)));
+            tangent_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34962))); 
+            buffer_views.push(serde_json::Value::Object(tangent_view));
+        }
+        
+        
+        if info.colors_byte_length > 0 {
+            let mut color_view = serde_json::Map::new();
+            color_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+            color_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(info.colors_byte_offset)));
+            color_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(info.colors_byte_length)));
+            color_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34962))); 
+            buffer_views.push(serde_json::Value::Object(color_view));
+        }
+        
+        
+        let mut indices_view = serde_json::Map::new();
+        indices_view.insert("buffer".to_string(), serde_json::Value::Number(serde_json::Number::from(0)));
+        indices_view.insert("byteOffset".to_string(), serde_json::Value::Number(serde_json::Number::from(info.indices_byte_offset)));
+        indices_view.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(info.indices_byte_length)));
+        indices_view.insert("target".to_string(), serde_json::Value::Number(serde_json::Number::from(34963))); 
+        buffer_views.push(serde_json::Value::Object(indices_view));
+        
+        next_buffer_view_index += 1 + 
+            (if info.normals_byte_length > 0 { 1 } else { 0 }) + 
+            (if info.uvs_byte_length > 0 { 1 } else { 0 }) + 
+            (if info.tangents_byte_length > 0 { 1 } else { 0 }) + 
+            (if info.colors_byte_length > 0 { 1 } else { 0 }) + 1;
+    }
+    json_obj.insert("bufferViews".to_string(), serde_json::Value::Array(buffer_views));
+    
+    
+    let mut buffer = serde_json::Map::new();
+    buffer.insert("byteLength".to_string(), serde_json::Value::Number(serde_json::Number::from(buffer_length)));
+    json_obj.insert("buffers".to_string(), serde_json::Value::Array(vec![serde_json::Value::Object(buffer)]));
+    
+    
+    serde_json::to_string(&serde_json::Value::Object(json_obj)).unwrap_or_else(|_| "{}".to_string())
+}
+
+#[derive(Debug, Clone)]
+struct MeshExportInfo {
+    name: String,
+    vertex_count: usize,
+    index_count: usize,
+    material_index: usize,
+    positions_byte_offset: usize,
+    positions_byte_length: usize,
+    normals_byte_offset: usize,
+    normals_byte_length: usize,
+    uvs_byte_offset: usize,
+    uvs_byte_length: usize,
+    tangents_byte_offset: usize,
+    tangents_byte_length: usize,
+    colors_byte_offset: usize,
+    colors_byte_length: usize,
+    indices_byte_offset: usize,
+    indices_byte_length: usize,
+    min_pos: Vec3,
+    max_pos: Vec3,
 }
