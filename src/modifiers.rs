@@ -1,4 +1,3 @@
-
 use crate::{Mesh, Vertex, Triangle, Edge, MeshResult, MeshError};
 use glam::{Vec2, Vec3, Vec4, Quat, Mat4};
 use std::collections::{HashMap, HashSet};
@@ -429,4 +428,121 @@ pub fn extrude_faces(mesh: &mut Mesh, faces: &[usize], amount: f32) -> MeshResul
     }
     
     Ok(())
+}
+
+/// Bends a mesh around an axis, similar to Blender's bend modifier.
+/// Implementation based on https://jayelinda.com/modelling-by-numbers-part-two-a/
+/// 
+/// # Parameters
+/// * `mesh` - The mesh to bend
+/// * `angle` - The bend angle in radians
+/// * `axis` - The axis around which to bend (0 = X, 1 = Y, 2 = Z)
+/// * `center` - The center point of the bend operation
+/// * `bounds_min` - The minimum bounds value along the bend axis
+/// * `bounds_max` - The maximum bounds value along the bend axis
+pub fn bend_mesh(mesh: &mut Mesh, angle: f32, axis: usize, center: Vec3, bounds_min: f32, bounds_max: f32) {
+    if angle.abs() < 0.0001 {
+        return; // No bend needed, avoid divide-by-zero
+    }
+
+    // Determine the axis configuration
+    let (bend_axis, plane_axis1, plane_axis2) = match axis {
+        0 => (0, 1, 2), // Bend around X-axis, in YZ plane
+        1 => (1, 0, 2), // Bend around Y-axis, in XZ plane
+        2 => (2, 0, 1), // Bend around Z-axis, in XY plane
+        _ => (1, 0, 2), // Default to Y-axis if invalid
+    };
+
+    // Calculate the height (length) of the mesh along the bend axis
+    let height = bounds_max - bounds_min;
+    
+    // Calculate the bend radius based on arc length
+    let bend_radius = height / angle;
+    
+    // Calculate start offset - the position where angle is zero
+    let mut start_offset = Vec3::ZERO;
+    start_offset[plane_axis1] = bend_radius;
+    
+    // Store original vertices for reference when calculating new positions
+    let original_vertices = mesh.vertices.clone();
+    
+    // Process each vertex
+    for (idx, vertex) in mesh.vertices.iter_mut().enumerate() {
+        // Calculate where on the bend axis this vertex falls (0.0 to 1.0)
+        let t = (original_vertices[idx].position[bend_axis] - bounds_min) / height;
+        
+        // Calculate the angle for this vertex
+        let current_angle = t * angle;
+        
+        // Skip if outside the bend range
+        if t < 0.0 || t > 1.0 {
+            continue;
+        }
+        
+        // Calculate position on the circular arc
+        let mut arc_pos = Vec3::ZERO;
+        arc_pos[plane_axis1] = current_angle.cos() * bend_radius;  // X or equivalent
+        arc_pos[plane_axis2] = current_angle.sin() * bend_radius;  // Y or equivalent
+        
+        // Create rotation quaternion for this position on the arc
+        let mut rotation_axis = Vec3::ZERO;
+        rotation_axis[bend_axis] = 1.0; // Rotate around bend axis
+        let rotation = Quat::from_axis_angle(rotation_axis, current_angle);
+        
+        // Get the vertex position relative to its height slice center
+        let mut local_pos = original_vertices[idx].position - center;
+        local_pos[bend_axis] = 0.0;  // Zero out the bend axis component
+        
+        // Rotate the local position
+        let rotated_pos = rotation * local_pos;
+        
+        // Position the vertex on the arc with proper orientation
+        let mut final_pos = center + arc_pos - start_offset;
+        final_pos[plane_axis1] += rotated_pos[plane_axis1];
+        final_pos[plane_axis2] += rotated_pos[plane_axis2];
+        final_pos[bend_axis] = center[bend_axis] + (original_vertices[idx].position[bend_axis] - center[bend_axis]);
+        
+        // Update the vertex position
+        vertex.position = final_pos;
+        
+        // Update the normal if it exists
+        if let Some(ref mut normal) = vertex.normal {
+            *normal = rotation * (*normal);
+        }
+        
+        // Update the tangent if it exists
+        if let Some(ref mut tangent) = vertex.tangent {
+            let rotated_vec = rotation * tangent.truncate();
+            *tangent = rotated_vec.extend(tangent.w);
+        }
+    }
+}
+
+/// Bends a mesh around an axis with automatic bounds calculation, similar to Blender's bend modifier.
+/// Uses the implementation described at https://jayelinda.com/modelling-by-numbers-part-two-a/
+///
+/// # Parameters
+/// * `mesh` - The mesh to bend
+/// * `angle` - The bend angle in radians
+/// * `axis` - The axis around which to bend (0 = X, 1 = Y, 2 = Z)
+pub fn bend_mesh_auto(mesh: &mut Mesh, angle: f32, axis: usize) {
+    if mesh.vertices.is_empty() {
+        return;
+    }
+
+    // Calculate bounds of the mesh
+    let mut min_val = f32::MAX;
+    let mut max_val = f32::MIN;
+    let mut center = Vec3::ZERO;
+
+    for vertex in &mesh.vertices {
+        min_val = min_val.min(vertex.position[axis]);
+        max_val = max_val.max(vertex.position[axis]);
+        center += vertex.position;
+    }
+    
+    // Calculate center of the mesh
+    center /= mesh.vertices.len() as f32;
+
+    bend_mesh(mesh, angle, axis, center, min_val, max_val);
 }
