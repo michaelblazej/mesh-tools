@@ -1,13 +1,63 @@
-//! Utilities for creating primitive mesh shapes
+//! # Primitive Mesh Generation
 //! 
 //! This module provides functions to generate common primitive 3D shapes like
-//! cubes, spheres, cylinders, planes, cones, torus, and more.
+//! cubes, spheres, cylinders, planes, cones, torus, and more. Each primitive
+//! is generated with proper vertices, triangles, normals, and texture coordinates.
+//!
+//! ## Examples
+//!
+//! ```rust
+//! use mesh_tools::primitives::{create_cube, create_sphere, CylinderParams};
+//! use glam::Vec3;
+//!
+//! // Create a simple cube
+//! let cube = create_cube(1.0, 1.0, 1.0);
+//!
+//! // Create a sphere with 32 segments and 16 rings
+//! let sphere = create_sphere(1.0, 32, 16);
+//!
+//! // Create a cylinder with custom parameters
+//! let cylinder_params = CylinderParams {
+//!     radius: 0.5,
+//!     height: 2.0,
+//!     radial_segments: 16,
+//!     height_segments: 1,
+//!     top_cap: true,
+//!     bottom_cap: true,
+//! };
+//! let cylinder = create_cylinder(cylinder_params);
+//! ```
 
 use crate::{Mesh, Vertex, Triangle, MeshResult};
 use glam::{Vec2, Vec3};
 use std::f32::consts::PI;
 
 /// Creates a cube mesh centered at the origin with the given dimensions
+///
+/// The cube is created with proper normals and texture coordinates for each face.
+/// The cube's vertices are arranged so that each face has consistent winding order.
+///
+/// # Arguments
+///
+/// * `width` - Width of the cube along the X axis
+/// * `height` - Height of the cube along the Y axis
+/// * `depth` - Depth of the cube along the Z axis
+///
+/// # Returns
+///
+/// A mesh representing the cube
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::primitives::create_cube;
+///
+/// // Create a 2x2x2 cube
+/// let cube = create_cube(2.0, 2.0, 2.0);
+///
+/// // Create a non-uniform cube (box)
+/// let box_mesh = create_cube(1.0, 2.0, 3.0);
+/// ```
 pub fn create_cube(width: f32, height: f32, depth: f32) -> Mesh {
     let half_width = width / 2.0;
     let half_height = height / 2.0;
@@ -176,7 +226,85 @@ pub fn create_cube(width: f32, height: f32, depth: f32) -> Mesh {
     mesh
 }
 
+/// Parameters for creating a plane
+///
+/// Defines the dimensions and subdivision of a plane primitive.
+#[derive(Debug, Clone, Copy)]
+pub struct PlaneParams {
+    /// Width of the plane along the X axis
+    pub size: Vec2,
+    /// Number of segments along width and depth
+    pub segments: (u32, u32),
+}
+
+impl Default for PlaneParams {
+    fn default() -> Self {
+        Self {
+            size: Vec2::new(1.0, 1.0),
+            segments: (1, 1),
+        }
+    }
+}
+
+/// Creates a plane mesh with the given parameters
+///
+/// The plane is created on the XZ plane (normal pointing up along Y-axis)
+/// with appropriate normals and texture coordinates.
+///
+/// # Arguments
+///
+/// * `params` - The parameters for the plane
+///
+/// # Returns
+///
+/// A mesh representing the plane
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::primitives::{create_plane, PlaneParams};
+/// use glam::Vec2;
+///
+/// // Create a simple plane with default parameters
+/// let plane = create_plane(PlaneParams::default());
+///
+/// // Create a larger plane with more subdivisions
+/// let subdivided_plane = create_plane(PlaneParams {
+///     size: Vec2::new(10.0, 10.0),
+///     segments: (10, 10),
+/// });
+/// ```
+pub fn create_plane(params: PlaneParams) -> Mesh {
+    create_plane(params.size.x, params.size.y, params.segments.0, params.segments.1)
+}
+
 /// Creates a plane mesh on the XZ plane with the given dimensions
+///
+/// The plane is created with the Y-axis as the normal direction.
+/// Subdivisions are controlled by the width_segments and depth_segments parameters.
+///
+/// # Arguments
+///
+/// * `width` - Width of the plane along the X axis
+/// * `depth` - Depth of the plane along the Z axis
+/// * `width_segments` - Number of segments along the width
+/// * `depth_segments` - Number of segments along the depth
+///
+/// # Returns
+///
+/// A mesh representing the plane
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::primitives::create_plane;
+///
+/// // Create a 2x2 plane with 1 segment
+/// let simple_plane = create_plane(2.0, 2.0, 1, 1);
+///
+/// // Create a 5x5 plane with 10 segments in each direction
+/// let detailed_plane = create_plane(5.0, 5.0, 10, 10);
+/// ```
 pub fn create_plane(width: f32, depth: f32, width_segments: u32, depth_segments: u32) -> Mesh {
     let mut mesh = Mesh::new();
     
@@ -227,7 +355,88 @@ pub fn create_plane(width: f32, depth: f32, width_segments: u32, depth_segments:
     mesh
 }
 
+/// Parameters for sphere creation
+///
+/// Defines the size and resolution of a UV-sphere primitive.
+#[derive(Debug, Clone, Copy)]
+pub struct SphereParams {
+    /// Radius of the sphere
+    pub radius: f32,
+    /// Number of segments around the equator
+    pub segments: u32,
+    /// Number of rings from pole to pole
+    pub rings: u32,
+}
+
+impl Default for SphereParams {
+    fn default() -> Self {
+        Self {
+            radius: 0.5,
+            segments: 32,
+            rings: 16,
+        }
+    }
+}
+
+/// Creates a sphere mesh with the given parameters
+///
+/// The sphere is generated using the UV-sphere approach (latitude/longitude).
+/// For a more evenly distributed vertices, consider using `create_icosphere`.
+///
+/// # Arguments
+///
+/// * `params` - The parameters for the sphere
+///
+/// # Returns
+///
+/// A mesh representing the sphere
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::primitives::{create_sphere, SphereParams};
+///
+/// // Create a sphere with default parameters
+/// let sphere = create_sphere(SphereParams::default());
+///
+/// // Create a larger, high-detail sphere
+/// let detailed_sphere = create_sphere(SphereParams {
+///     radius: 1.0,
+///     segments: 64,
+///     rings: 32,
+/// });
+/// ```
+pub fn create_sphere(params: SphereParams) -> Mesh {
+    create_sphere(params.radius, params.segments, params.rings)
+}
+
 /// Creates a sphere mesh using UV-sphere approach
+///
+/// This generates a sphere by creating rings of vertices at different latitudes,
+/// from the south pole to the north pole. The vertices are distributed in a grid
+/// pattern, similar to latitude and longitude lines on a globe.
+///
+/// # Arguments
+///
+/// * `radius` - Radius of the sphere
+/// * `segments` - Number of segments around the equator (like longitude)
+/// * `rings` - Number of rings from pole to pole (like latitude)
+///
+/// # Returns
+///
+/// A mesh representing the sphere
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::primitives::create_sphere;
+///
+/// // Create a sphere with radius 1.0 and medium detail
+/// let sphere = create_sphere(1.0, 32, 16);
+///
+/// // Create a high-detail sphere
+/// let hd_sphere = create_sphere(0.5, 64, 32);
+/// ```
 pub fn create_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
     let mut mesh = Mesh::new();
     
@@ -316,29 +525,61 @@ pub fn create_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
 }
 
 /// Parameters for cone creation
+///
+/// Defines the dimensions and resolution of a cone primitive.
+#[derive(Debug, Clone, Copy)]
 pub struct ConeParams {
-    /// Radius of the base
-    pub radius: f32, 
+    /// Radius at the base of the cone
+    pub radius: f32,
     /// Height of the cone
     pub height: f32,
     /// Number of segments around the base
     pub segments: u32,
-    /// Whether to include the base cap
-    pub capped: bool,
+    /// Whether to include a cap at the base
+    pub cap: bool,
 }
 
 impl Default for ConeParams {
     fn default() -> Self {
         Self {
-            radius: 1.0,
+            radius: 0.5,
             height: 1.0,
             segments: 32,
-            capped: true,
+            cap: true,
         }
     }
 }
 
 /// Creates a cone mesh with the specified parameters
+///
+/// The cone is created with its base on the XZ plane and its tip pointing up
+/// along the positive Y axis. The cone includes proper normals and texture
+/// coordinates.
+///
+/// # Arguments
+///
+/// * `params` - Parameters controlling the dimensions and resolution of the cone
+///
+/// # Returns
+///
+/// A mesh representing the cone
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::primitives::{create_cone, ConeParams};
+///
+/// // Create a cone with default parameters
+/// let cone = create_cone(ConeParams::default());
+///
+/// // Create a tall, thin cone without a base cap
+/// let thin_cone = create_cone(ConeParams {
+///     radius: 0.3,
+///     height: 2.0,
+///     segments: 16,
+///     cap: false,
+/// });
+/// ```
 pub fn create_cone(params: ConeParams) -> Mesh {
     let mut mesh = Mesh::new();
     
@@ -351,7 +592,7 @@ pub fn create_cone(params: ConeParams) -> Mesh {
     
     // Create vertices for the base
     let mut base_vertices = Vec::with_capacity(params.segments as usize);
-    let center_idx = if params.capped {
+    let center_idx = if params.cap {
         Some(mesh.add_vertex(Vertex::with_all(
             Vec3::new(0.0, -params.height / 2.0, 0.0),
             Vec3::new(0.0, -1.0, 0.0),
@@ -372,11 +613,11 @@ pub fn create_cone(params: ConeParams) -> Mesh {
         
         let idx = mesh.add_vertex(Vertex::with_all(
             Vec3::new(x, -params.height / 2.0, z),
-            if params.capped { Vec3::new(0.0, -1.0, 0.0) } else { side_normal },
+            if params.cap { Vec3::new(0.0, -1.0, 0.0) } else { side_normal },
             Vec2::new(i as f32 / params.segments as f32, 1.0),
         ));
         
-        if !params.capped {
+        if !params.cap {
             let side_idx = mesh.add_vertex(Vertex::with_all(
                 Vec3::new(x, -params.height / 2.0, z),
                 side_normal,
@@ -395,7 +636,7 @@ pub fn create_cone(params: ConeParams) -> Mesh {
     }
     
     // Create triangles for the base if capped
-    if params.capped && center_idx.is_some() {
+    if params.cap && center_idx.is_some() {
         let center = center_idx.unwrap();
         for i in 0..params.segments {
             let next = (i + 1) % params.segments;
@@ -407,6 +648,9 @@ pub fn create_cone(params: ConeParams) -> Mesh {
 }
 
 /// Parameters for cylinder creation
+///
+/// Defines the dimensions and resolution of a cylinder primitive.
+#[derive(Debug, Clone, Copy)]
 pub struct CylinderParams {
     /// Radius of the cylinder
     pub radius: f32,
@@ -416,17 +660,17 @@ pub struct CylinderParams {
     pub radial_segments: u32,
     /// Number of segments along the height
     pub height_segments: u32,
-    /// Whether to include the top cap
+    /// Whether to include a cap at the top
     pub top_cap: bool,
-    /// Whether to include the bottom cap
+    /// Whether to include a cap at the bottom
     pub bottom_cap: bool,
 }
 
 impl Default for CylinderParams {
     fn default() -> Self {
         Self {
-            radius: 1.0,
-            height: 2.0,
+            radius: 0.5,
+            height: 1.0,
             radial_segments: 32,
             height_segments: 1,
             top_cap: true,
@@ -436,6 +680,36 @@ impl Default for CylinderParams {
 }
 
 /// Creates a cylinder mesh with the specified parameters
+///
+/// The cylinder is created with its central axis aligned with the Y axis.
+/// The cylinder includes proper normals and texture coordinates.
+///
+/// # Arguments
+///
+/// * `params` - Parameters controlling the dimensions and resolution of the cylinder
+///
+/// # Returns
+///
+/// A mesh representing the cylinder
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::primitives::{create_cylinder, CylinderParams};
+///
+/// // Create a cylinder with default parameters
+/// let cylinder = create_cylinder(CylinderParams::default());
+///
+/// // Create a tall, thin cylinder with open ends (no caps)
+/// let tube = create_cylinder(CylinderParams {
+///     radius: 0.2,
+///     height: 2.0,
+///     radial_segments: 16,
+///     height_segments: 4,
+///     top_cap: false,
+///     bottom_cap: false,
+/// });
+/// ```
 pub fn create_cylinder(params: CylinderParams) -> Mesh {
     let mut mesh = Mesh::new();
     
@@ -557,12 +831,15 @@ pub fn create_cylinder(params: CylinderParams) -> Mesh {
 }
 
 /// Parameters for torus creation
+///
+/// Defines the dimensions and resolution of a torus (donut) primitive.
+#[derive(Debug, Clone, Copy)]
 pub struct TorusParams {
-    /// Major radius (radius from the center to the middle of the tube)
+    /// Radius from the center of the torus to the center of the tube
     pub radius: f32,
-    /// Tube radius (radius of the tube itself)
+    /// Radius of the tube
     pub tube_radius: f32,
-    /// Number of segments around the major radius
+    /// Number of segments around the circumference of the torus
     pub radial_segments: u32,
     /// Number of segments around the tube
     pub tubular_segments: u32,
@@ -574,12 +851,40 @@ impl Default for TorusParams {
             radius: 1.0,
             tube_radius: 0.4,
             radial_segments: 32,
-            tubular_segments: 32,
+            tubular_segments: 24,
         }
     }
 }
 
 /// Creates a torus (donut shape) mesh with the specified parameters
+///
+/// The torus is created centered at the origin, with its central axis aligned
+/// with the Y axis. The torus includes proper normals and texture coordinates.
+///
+/// # Arguments
+///
+/// * `params` - Parameters controlling the dimensions and resolution of the torus
+///
+/// # Returns
+///
+/// A mesh representing the torus
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::primitives::{create_torus, TorusParams};
+///
+/// // Create a torus with default parameters
+/// let torus = create_torus(TorusParams::default());
+///
+/// // Create a thin ring torus
+/// let thin_torus = create_torus(TorusParams {
+///     radius: 1.0,
+///     tube_radius: 0.1,
+///     radial_segments: 48,
+///     tubular_segments: 12,
+/// });
+/// ```
 pub fn create_torus(params: TorusParams) -> Mesh {
     let mut mesh = Mesh::new();
     
@@ -640,24 +945,66 @@ pub fn create_torus(params: TorusParams) -> Mesh {
 }
 
 /// Parameters for icosphere (subdivision-based sphere) creation
+///
+/// Defines the size and detail level of an icosphere primitive.
+#[derive(Debug, Clone, Copy)]
 pub struct IcosphereParams {
     /// Radius of the sphere
     pub radius: f32,
-    /// Number of subdivision iterations (0 = icosahedron, each increment quadruples the number of faces)
+    /// Number of subdivision iterations to perform
     pub subdivisions: u32,
 }
 
 impl Default for IcosphereParams {
     fn default() -> Self {
         Self {
-            radius: 1.0,
+            radius: 0.5,
             subdivisions: 2,
         }
     }
 }
 
 /// Creates an icosphere (a sphere based on an icosahedron with subdivisions)
-/// This provides a more even distribution of vertices than a UV sphere
+///
+/// This provides a more even distribution of vertices than a UV sphere.
+/// The icosphere starts with a regular icosahedron and then performs
+/// subdivision of the faces to create a more detailed and evenly distributed
+/// sphere.
+///
+/// # Arguments
+///
+/// * `params` - Parameters controlling the size and detail of the icosphere
+///
+/// # Returns
+///
+/// A mesh representing the icosphere
+///
+/// # Note
+///
+/// Each subdivision level increases the number of triangles by a factor of 4.
+/// - Level 0: 20 triangles
+/// - Level 1: 80 triangles
+/// - Level 2: 320 triangles
+/// - Level 3: 1,280 triangles
+/// - Level 4: 5,120 triangles
+/// - Level 5: 20,480 triangles
+///
+/// Be careful with high subdivision levels as they can generate very dense meshes.
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::primitives::{create_icosphere, IcosphereParams};
+///
+/// // Create an icosphere with default parameters
+/// let icosphere = create_icosphere(IcosphereParams::default());
+///
+/// // Create a high-detail icosphere
+/// let detailed_icosphere = create_icosphere(IcosphereParams {
+///     radius: 1.0,
+///     subdivisions: 4,
+/// });
+/// ```
 pub fn create_icosphere(params: IcosphereParams) -> Mesh {
     let mut mesh = Mesh::new();
     
@@ -834,7 +1181,7 @@ mod tests {
             radius: 1.0,
             height: 2.0,
             segments: 8,
-            capped: true,
+            cap: true,
         };
         
         let cone = create_cone(params);

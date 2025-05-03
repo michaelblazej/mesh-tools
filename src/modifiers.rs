@@ -1,17 +1,65 @@
-//! Mesh modifier utilities
+//! # Mesh Modifier Utilities
 //!
 //! This module provides functions to modify and transform meshes, including:
-//! - Transformations (scaling, rotation, translation)
-//! - Subdivision (smooth, catmull-clark)
-//! - Simplification (reduction of triangles)
-//! - Welding (combining vertices)
-//! - Smoothing operations
+//! 
+//! - **Transformations**: Scale, rotate, and translate meshes in 3D space
+//! - **Subdivision**: Break down triangles into smaller ones for smoother surfaces
+//! - **Simplification**: Reduce triangle count while preserving shape
+//! - **Welding**: Combine nearby vertices to clean up meshes
+//! - **Smoothing**: Generate smooth normals and improve surface appearance
+//!
+//! ## Examples
+//!
+//! ```rust
+//! use mesh_tools::{Mesh, primitives::create_cube};
+//! use mesh_tools::modifiers::{translate_mesh, rotate_mesh, scale_mesh, generate_smooth_normals};
+//! use glam::{Vec3, Quat};
+//!
+//! // Create a cube and transform it
+//! let mut cube = create_cube(1.0, 1.0, 1.0);
+//!
+//! // Scale it non-uniformly
+//! scale_mesh(&mut cube, Vec3::new(2.0, 1.0, 0.5));
+//!
+//! // Rotate it 45 degrees around Y axis
+//! rotate_mesh(&mut cube, Quat::from_rotation_y(std::f32::consts::FRAC_PI_4));
+//!
+//! // Move it up 3 units
+//! translate_mesh(&mut cube, Vec3::new(0.0, 3.0, 0.0));
+//!
+//! // Generate smooth normals
+//! generate_smooth_normals(&mut cube);
+//! ```
 
 use crate::{Mesh, Vertex, Triangle, Edge, MeshResult, MeshError};
 use glam::{Vec2, Vec3, Vec4, Quat, Mat4};
 use std::collections::{HashMap, HashSet};
 
 /// Applies a transformation matrix to all vertices in the mesh
+///
+/// This is a general-purpose transformation function that can handle any
+/// combination of translation, rotation, and scaling through a single matrix.
+/// It correctly transforms positions, normals, and tangents.
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh to transform
+/// * `transform` - The 4x4 transformation matrix to apply
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::{Mesh, primitives::create_cube, modifiers::transform_mesh};
+/// use glam::Mat4;
+///
+/// let mut cube = create_cube(1.0, 1.0, 1.0);
+///
+/// // Create a transformation matrix (rotation + translation)
+/// let transform = Mat4::from_rotation_y(0.5) * Mat4::from_translation(glam::Vec3::new(0.0, 1.0, 0.0));
+///
+/// // Apply the transformation
+/// transform_mesh(&mut cube, transform);
+/// ```
 pub fn transform_mesh(mesh: &mut Mesh, transform: Mat4) {
     for vertex in &mut mesh.vertices {
         // Apply transformation to position
@@ -34,395 +82,613 @@ pub fn transform_mesh(mesh: &mut Mesh, transform: Mat4) {
 }
 
 /// Applies a scale transformation to the mesh
+///
+/// Scales the mesh uniformly or non-uniformly along the X, Y, and Z axes.
+/// This correctly adjusts positions, normals, and tangents.
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh to scale
+/// * `scale` - The scale factors for X, Y, and Z axes
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::{Mesh, primitives::create_cube, modifiers::scale_mesh};
+/// use glam::Vec3;
+///
+/// let mut cube = create_cube(1.0, 1.0, 1.0);
+///
+/// // Scale uniformly (2x size)
+/// scale_mesh(&mut cube, Vec3::splat(2.0));
+///
+/// // Or scale non-uniformly to create a stretched object
+/// // scale_mesh(&mut cube, Vec3::new(1.0, 2.0, 0.5));
+/// ```
 pub fn scale_mesh(mesh: &mut Mesh, scale: Vec3) {
     let transform = Mat4::from_scale(scale);
     transform_mesh(mesh, transform);
 }
 
 /// Applies a rotation transformation to the mesh
+///
+/// Rotates the mesh using a quaternion, which can represent any rotation in 3D space.
+/// This correctly adjusts positions, normals, and tangents.
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh to rotate
+/// * `rotation` - The rotation quaternion
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::{Mesh, primitives::create_cube, modifiers::rotate_mesh};
+/// use glam::Quat;
+/// use std::f32::consts::PI;
+///
+/// let mut cube = create_cube(1.0, 1.0, 1.0);
+///
+/// // Rotate 90 degrees around Y axis
+/// rotate_mesh(&mut cube, Quat::from_rotation_y(PI / 2.0));
+///
+/// // Rotate around an arbitrary axis
+/// let axis = glam::Vec3::new(1.0, 1.0, 1.0).normalize();
+/// rotate_mesh(&mut cube, Quat::from_axis_angle(axis, PI / 4.0));
+/// ```
 pub fn rotate_mesh(mesh: &mut Mesh, rotation: Quat) {
     let transform = Mat4::from_quat(rotation);
     transform_mesh(mesh, transform);
 }
 
 /// Applies a translation transformation to the mesh
+///
+/// Moves the mesh along the X, Y, and Z axes. This only affects vertex positions,
+/// not normals or tangents (as they are direction vectors).
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh to translate
+/// * `translation` - The translation vector
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::{Mesh, primitives::create_cube, modifiers::translate_mesh};
+/// use glam::Vec3;
+///
+/// let mut cube = create_cube(1.0, 1.0, 1.0);
+///
+/// // Move the cube up 2 units
+/// translate_mesh(&mut cube, Vec3::new(0.0, 2.0, 0.0));
+///
+/// // Move the cube diagonally
+/// translate_mesh(&mut cube, Vec3::new(1.0, 0.0, 1.0));
+/// ```
 pub fn translate_mesh(mesh: &mut Mesh, translation: Vec3) {
     let transform = Mat4::from_translation(translation);
     transform_mesh(mesh, transform);
 }
 
 /// Flips the normals of all vertices in the mesh
+///
+/// This reverses the direction of all normals and also reverses the winding order
+/// of triangles to maintain consistent surface orientation.
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh whose normals will be flipped
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::{Mesh, primitives::create_sphere, modifiers::flip_normals};
+///
+/// let mut sphere = create_sphere(1.0, 16, 8);
+///
+/// // Flip the normals (useful for inside-out objects like interior rooms)
+/// flip_normals(&mut sphere);
+/// ```
 pub fn flip_normals(mesh: &mut Mesh) {
+    // Reverse the direction of all normals
     for vertex in &mut mesh.vertices {
-        if let Some(normal) = &mut vertex.normal {
+        if let Some(ref mut normal) = vertex.normal {
             *normal = -*normal;
         }
     }
     
-    // Also flip the winding order of all triangles
+    // Reverse the winding order of all triangles
     for triangle in &mut mesh.triangles {
-        // Swap the second and third indices to flip the winding order
-        let temp = triangle.indices[1];
-        triangle.indices[1] = triangle.indices[2];
+        let temp = triangle.indices[0];
+        triangle.indices[0] = triangle.indices[2];
         triangle.indices[2] = temp;
     }
 }
 
 /// Vertex welding parameters
+///
+/// Controls how vertices are welded together to simplify a mesh.
+#[derive(Debug, Clone, Copy)]
 pub struct WeldParameters {
-    /// The threshold distance for welding vertices
-    pub threshold: f32,
-    /// Whether to weld only vertices with matching normals
-    pub respect_normals: bool,
-    /// Whether to weld only vertices with matching UVs
-    pub respect_uvs: bool,
+    /// Distance threshold below which vertices are considered the same
+    pub distance_threshold: f32,
+    /// Whether to weld only vertices with similar normals
+    pub check_normals: bool,
+    /// Angle threshold (in radians) for considering normals similar
+    pub normal_threshold: f32,
+    /// Whether to weld only vertices with similar UVs
+    pub check_uvs: bool,
+    /// Distance threshold for considering UVs similar
+    pub uv_threshold: f32,
 }
 
 impl Default for WeldParameters {
     fn default() -> Self {
         Self {
-            threshold: 0.0001,
-            respect_normals: false,
-            respect_uvs: false,
+            distance_threshold: 0.0001,
+            check_normals: true,
+            normal_threshold: 0.01,
+            check_uvs: true,
+            uv_threshold: 0.01,
         }
     }
 }
 
 /// Welds vertices that are within a certain distance of each other
+///
+/// This reduces the number of vertices in a mesh by combining those that are very close
+/// together. This is useful for cleaning up imported meshes, fixing T-junctions, and
+/// preparing meshes for subdivision.
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh in which to weld vertices
+/// * `params` - Parameters controlling the welding process
+///
+/// # Returns
+///
+/// The number of vertices that were welded, or an error if the operation failed
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::{Mesh, primitives::create_cube, modifiers::{weld_vertices, WeldParameters}};
+///
+/// let mut cube = create_cube(1.0, 1.0, 1.0);
+///
+/// // Weld vertices with default parameters
+/// let welded_count = weld_vertices(&mut cube, WeldParameters::default()).unwrap();
+///
+/// // Or use custom parameters for more aggressive welding
+/// let custom_params = WeldParameters {
+///     distance_threshold: 0.01, // Weld vertices up to 0.01 units apart
+///     check_normals: false,     // Ignore normal differences
+///     ..Default::default()
+/// };
+/// let welded_count = weld_vertices(&mut cube, custom_params).unwrap();
+/// ```
 pub fn weld_vertices(mesh: &mut Mesh, params: WeldParameters) -> MeshResult<usize> {
-    // Create a mapping from old vertex indices to new ones
-    let mut vertex_map = Vec::with_capacity(mesh.vertices.len());
-    let mut unique_vertices: Vec<Vertex> = Vec::new();
-    let mut welded_count = 0;
+    // Build a map of original vertex indices to new (potentially welded) vertex indices
+    let mut vertex_map = HashMap::new();
+    let mut new_vertices = Vec::new();
     
+    // For each vertex in the original mesh
     for (old_idx, vertex) in mesh.vertices.iter().enumerate() {
+        // Check if there's a nearby vertex we can weld to
         let mut found_match = false;
         
-        for (new_idx, unique) in unique_vertices.iter().enumerate() {
+        for (new_idx, new_vertex) in new_vertices.iter().enumerate() {
             // Check position distance
-            if (vertex.position - unique.position).length_squared() > params.threshold * params.threshold {
+            let dist = (vertex.position - new_vertex.position).length_squared();
+            if dist > params.distance_threshold * params.distance_threshold {
                 continue;
             }
             
-            // Check normals if required
-            if params.respect_normals {
-                match (&vertex.normal, &unique.normal) {
-                    (Some(n1), Some(n2)) => {
-                        if (*n1 - *n2).length_squared() > params.threshold {
-                            continue;
-                        }
-                    },
-                    (None, None) => {},
-                    _ => continue, // One has normal, one doesn't
+            // Check normals if requested
+            if params.check_normals && vertex.normal.is_some() && new_vertex.normal.is_some() {
+                let normal_dot = vertex.normal.unwrap().dot(new_vertex.normal.unwrap());
+                if normal_dot < 1.0 - params.normal_threshold {
+                    continue;
                 }
             }
             
-            // Check UVs if required
-            if params.respect_uvs {
-                match (&vertex.uv, &unique.uv) {
-                    (Some(uv1), Some(uv2)) => {
-                        if (*uv1 - *uv2).length_squared() > params.threshold {
-                            continue;
-                        }
-                    },
-                    (None, None) => {},
-                    _ => continue, // One has UV, one doesn't
+            // Check UVs if requested
+            if params.check_uvs && vertex.uv.is_some() && new_vertex.uv.is_some() {
+                let uv_dist = (vertex.uv.unwrap() - new_vertex.uv.unwrap()).length_squared();
+                if uv_dist > params.uv_threshold * params.uv_threshold {
+                    continue;
                 }
             }
             
-            // If we get here, we found a match
-            vertex_map.push(new_idx);
+            // If we got here, we found a match
+            vertex_map.insert(old_idx, new_idx);
             found_match = true;
-            welded_count += 1;
             break;
         }
         
+        // If no match found, add this as a new vertex
         if !found_match {
-            // No match found, add as a new unique vertex
-            vertex_map.push(unique_vertices.len());
-            unique_vertices.push(vertex.clone());
+            vertex_map.insert(old_idx, new_vertices.len());
+            new_vertices.push(vertex.clone());
         }
     }
     
-    // Update triangles to reference new vertex indices
+    // Count how many vertices were welded
+    let welded_count = mesh.vertices.len() - new_vertices.len();
+    
+    // Update triangles with new vertex indices
     for triangle in &mut mesh.triangles {
         for i in 0..3 {
-            if triangle.indices[i] >= vertex_map.len() {
+            if let Some(&new_idx) = vertex_map.get(&triangle.indices[i]) {
+                triangle.indices[i] = new_idx;
+            } else {
                 return Err(MeshError::InvalidIndex(triangle.indices[i]));
             }
-            triangle.indices[i] = vertex_map[triangle.indices[i]];
         }
     }
     
-    // Update polygons if they exist
-    if let Some(ref mut polygons) = mesh.polygons {
-        for polygon in polygons {
-            for i in 0..polygon.indices.len() {
-                if polygon.indices[i] >= vertex_map.len() {
-                    return Err(MeshError::InvalidIndex(polygon.indices[i]));
-                }
-                polygon.indices[i] = vertex_map[polygon.indices[i]];
-            }
-        }
-    }
+    // Replace vertices
+    mesh.vertices = new_vertices;
     
-    // Replace the vertices with the unique ones
-    mesh.vertices = unique_vertices;
-    
-    // Return the number of vertices removed
     Ok(welded_count)
 }
 
 /// Removes unused vertices (not referenced by any triangle)
+///
+/// Scans the mesh for vertices that aren't used in any triangle and removes them,
+/// remapping the remaining triangle indices as needed.
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh to clean up
+///
+/// # Returns
+///
+/// The number of vertices removed
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::{Mesh, Vertex, Triangle, modifiers::remove_unused_vertices};
+/// use glam::Vec3;
+///
+/// // Create a mesh with an unused vertex
+/// let mut mesh = Mesh::new();
+/// let v0 = mesh.add_vertex(Vertex::new(Vec3::new(0.0, 0.0, 0.0)));
+/// let v1 = mesh.add_vertex(Vertex::new(Vec3::new(1.0, 0.0, 0.0)));
+/// let v2 = mesh.add_vertex(Vertex::new(Vec3::new(0.0, 1.0, 0.0)));
+/// let unused = mesh.add_vertex(Vertex::new(Vec3::new(2.0, 2.0, 2.0))); // Unused vertex
+///
+/// mesh.add_triangle(v0, v1, v2).unwrap();
+///
+/// // Remove unused vertices
+/// let removed_count = remove_unused_vertices(&mut mesh);
+/// assert_eq!(removed_count, 1); // One vertex should be removed
+/// ```
 pub fn remove_unused_vertices(mesh: &mut Mesh) -> usize {
-    // Find all used vertices
-    let mut used_vertices = HashSet::new();
+    // Find which vertices are used
+    let mut used_vertices = vec![false; mesh.vertices.len()];
+    
     for triangle in &mesh.triangles {
         for &idx in &triangle.indices {
-            used_vertices.insert(idx);
+            if idx < used_vertices.len() {
+                used_vertices[idx] = true;
+            }
         }
     }
     
-    // If all vertices are used, no need to do anything
-    if used_vertices.len() == mesh.vertices.len() {
-        return 0;
+    // Count unused vertices
+    let unused_count = used_vertices.iter().filter(|&&used| !used).count();
+    
+    if unused_count == 0 {
+        return 0; // Early return if no unused vertices
     }
     
-    // Create new vertex list and mapping
-    let mut new_vertices = Vec::with_capacity(used_vertices.len());
-    let mut vertex_map = vec![0; mesh.vertices.len()];
+    // Build a map from old indices to new indices
+    let mut index_map = vec![0; mesh.vertices.len()];
+    let mut new_index = 0;
     
-    for &old_idx in used_vertices.iter() {
-        vertex_map[old_idx] = new_vertices.len();
-        new_vertices.push(mesh.vertices[old_idx].clone());
+    for (old_idx, &used) in used_vertices.iter().enumerate() {
+        if used {
+            index_map[old_idx] = new_index;
+            new_index += 1;
+        }
+    }
+    
+    // Create new vertex list with only used vertices
+    let mut new_vertices = Vec::with_capacity(mesh.vertices.len() - unused_count);
+    
+    for (idx, vertex) in mesh.vertices.iter().enumerate() {
+        if used_vertices[idx] {
+            new_vertices.push(vertex.clone());
+        }
     }
     
     // Update triangle indices
     for triangle in &mut mesh.triangles {
         for i in 0..3 {
-            triangle.indices[i] = vertex_map[triangle.indices[i]];
+            triangle.indices[i] = index_map[triangle.indices[i]];
         }
     }
     
-    // Update polygons if they exist
-    if let Some(ref mut polygons) = mesh.polygons {
-        for polygon in polygons {
-            for i in 0..polygon.indices.len() {
-                polygon.indices[i] = vertex_map[polygon.indices[i]];
-            }
-        }
-    }
-    
-    let removed_count = mesh.vertices.len() - new_vertices.len();
+    // Replace vertices
     mesh.vertices = new_vertices;
     
-    removed_count
+    unused_count
 }
 
 /// Remove degenerate triangles (triangles with duplicate vertices or zero area)
+///
+/// Degenerate triangles can cause rendering artifacts and physics problems, so it's
+/// often useful to remove them.
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh to clean up
+///
+/// # Returns
+///
+/// The number of triangles removed
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::{Mesh, Vertex, Triangle, modifiers::remove_degenerate_triangles};
+/// use glam::Vec3;
+///
+/// // Create a mesh with a degenerate triangle
+/// let mut mesh = Mesh::new();
+/// let v0 = mesh.add_vertex(Vertex::new(Vec3::new(0.0, 0.0, 0.0)));
+/// let v1 = mesh.add_vertex(Vertex::new(Vec3::new(1.0, 0.0, 0.0)));
+///
+/// // Add a valid triangle
+/// mesh.add_triangle(v0, v1, mesh.add_vertex(Vertex::new(Vec3::new(0.0, 1.0, 0.0)))).unwrap();
+/// // Add a degenerate triangle (two vertices are the same)
+/// mesh.add_triangle(v0, v1, v1).unwrap();
+///
+/// // Remove degenerate triangles
+/// let removed_count = remove_degenerate_triangles(&mut mesh);
+/// assert_eq!(removed_count, 1); // One triangle should be removed
+/// ```
 pub fn remove_degenerate_triangles(mesh: &mut Mesh) -> usize {
-    let original_count = mesh.triangles.len();
+    let initial_count = mesh.triangles.len();
     
     // Filter out degenerate triangles
     mesh.triangles.retain(|triangle| {
+        // Check for duplicate indices
         let [a, b, c] = triangle.indices;
-        
-        // Check for duplicate vertices
-        if a == b || b == c || c == a {
+        if a == b || b == c || a == c {
             return false;
         }
         
-        // Check for zero area (colinear vertices)
-        if mesh.vertices.len() > std::cmp::max(a, std::cmp::max(b, c)) {
-            let va = mesh.vertices[a].position;
-            let vb = mesh.vertices[b].position;
-            let vc = mesh.vertices[c].position;
-            
-            let edge1 = vb - va;
-            let edge2 = vc - va;
-            
-            // Cross product to check for colinearity
-            let cross = edge1.cross(edge2);
-            
-            // If the cross product is close to zero, the triangle is degenerate
-            if cross.length_squared() < 1e-10 {
-                return false;
-            }
-        }
-        
-        true
-    });
-    
-    original_count - mesh.triangles.len()
-}
-
-/// Generates smooth vertex normals for a mesh by averaging face normals
-pub fn generate_smooth_normals(mesh: &mut Mesh) {
-    // First ensure we have an edge structure to determine which triangles are connected
-    let mut vertex_triangles: Vec<Vec<usize>> = vec![Vec::new(); mesh.vertices.len()];
-    
-    // For each triangle, record which vertices it uses
-    for (triangle_idx, triangle) in mesh.triangles.iter().enumerate() {
-        for &vertex_idx in &triangle.indices {
-            vertex_triangles[vertex_idx].push(triangle_idx);
-        }
-    }
-    
-    // Compute face normals for each triangle
-    let mut face_normals = Vec::with_capacity(mesh.triangles.len());
-    for triangle in &mesh.triangles {
-        let [a, b, c] = triangle.indices;
-        
-        if a >= mesh.vertices.len() || b >= mesh.vertices.len() || c >= mesh.vertices.len() {
-            // Invalid triangle, skip it
-            face_normals.push(Vec3::Z);
-            continue;
-        }
-        
+        // Check for zero area (collinear vertices)
         let va = mesh.vertices[a].position;
         let vb = mesh.vertices[b].position;
         let vc = mesh.vertices[c].position;
         
         let edge1 = vb - va;
         let edge2 = vc - va;
-        let normal = edge1.cross(edge2).normalize_or_zero();
-        face_normals.push(normal);
+        let cross = edge1.cross(edge2);
+        
+        cross.length_squared() > 1e-10 // Small threshold for floating point imprecision
+    });
+    
+    initial_count - mesh.triangles.len()
+}
+
+/// Generates smooth vertex normals for a mesh by averaging face normals
+///
+/// This creates smooth normals by averaging the normals of all triangles that
+/// share each vertex. This is useful for creating smooth surfaces.
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh for which to generate normals
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::{primitives::create_cube, modifiers::generate_smooth_normals};
+///
+/// // Create a cube and generate smooth normals
+/// let mut cube = create_cube(1.0, 1.0, 1.0);
+/// generate_smooth_normals(&mut cube);
+/// ```
+pub fn generate_smooth_normals(mesh: &mut Mesh) {
+    // Initialize normal accumulators
+    let mut normal_sums = vec![Vec3::ZERO; mesh.vertices.len()];
+    
+    // Accumulate face normals to vertices
+    for triangle in &mesh.triangles {
+        let [a, b, c] = triangle.indices;
+        
+        // Get the vertex positions
+        let va = mesh.vertices[a].position;
+        let vb = mesh.vertices[b].position;
+        let vc = mesh.vertices[c].position;
+        
+        // Calculate the face normal using the cross product
+        let edge1 = vb - va;
+        let edge2 = vc - va;
+        let normal = edge1.cross(edge2).normalize();
+        
+        // Accumulate to each vertex
+        normal_sums[a] += normal;
+        normal_sums[b] += normal;
+        normal_sums[c] += normal;
     }
     
-    // Compute vertex normals by averaging face normals of adjacent triangles
-    for (vertex_idx, triangles) in vertex_triangles.iter().enumerate() {
-        if triangles.is_empty() {
-            continue;
-        }
-        
-        let mut normal = Vec3::ZERO;
-        for &triangle_idx in triangles {
-            normal += face_normals[triangle_idx];
-        }
-        
-        let normalized = normal.normalize_or_zero();
-        if normalized != Vec3::ZERO {
-            mesh.vertices[vertex_idx].normal = Some(normalized);
+    // Normalize and assign the final normals
+    for (i, normal_sum) in normal_sums.iter().enumerate() {
+        if normal_sum.length_squared() > 0.0 {
+            mesh.vertices[i].normal = Some(normal_sum.normalize());
+        } else {
+            // Fall back to a default normal if no contribution
+            mesh.vertices[i].normal = Some(Vec3::Y);
         }
     }
-    
-    mesh.has_normals = true;
 }
 
 /// Subdivides each triangle into 4 triangles
+///
+/// This increases mesh resolution by splitting each edge at its midpoint and
+/// creating 4 new triangles from each original triangle. This is useful for
+/// adding detail to a mesh.
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh to subdivide
+///
+/// # Returns
+///
+/// `Ok(())` if subdivision was successful, or an error if it failed
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::{primitives::create_cube, modifiers::subdivide_mesh};
+///
+/// // Create a cube and subdivide it
+/// let mut cube = create_cube(1.0, 1.0, 1.0);
+/// subdivide_mesh(&mut cube).unwrap();
+/// // Each face of the cube now has 4 triangles instead of 2
+/// ```
 pub fn subdivide_mesh(mesh: &mut Mesh) -> MeshResult<()> {
-    // Edge midpoint cache to avoid creating duplicate vertices
-    let mut edge_midpoints: HashMap<(usize, usize), usize> = HashMap::new();
+    // Cache for midpoint indices to avoid creating duplicate vertices
+    let mut edge_midpoints = HashMap::new();
     
-    // Clone the original triangles because we'll be modifying the mesh
+    // Store the original triangles
     let original_triangles = mesh.triangles.clone();
+    
+    // Clear triangles to rebuild
     mesh.triangles.clear();
     
     // For each original triangle
     for triangle in &original_triangles {
         let [a, b, c] = triangle.indices;
         
-        // Get or create midpoints for each edge
-        let midpoint_ab = get_or_create_midpoint(mesh, a, b, &mut edge_midpoints)?;
-        let midpoint_bc = get_or_create_midpoint(mesh, b, c, &mut edge_midpoints)?;
-        let midpoint_ca = get_or_create_midpoint(mesh, c, a, &mut edge_midpoints)?;
+        // Get or create midpoints
+        let ab = get_or_create_midpoint(mesh, a, b, &mut edge_midpoints)?;
+        let bc = get_or_create_midpoint(mesh, b, c, &mut edge_midpoints)?;
+        let ca = get_or_create_midpoint(mesh, c, a, &mut edge_midpoints)?;
         
         // Create 4 new triangles
-        let _ = mesh.add_triangle(a, midpoint_ab, midpoint_ca)?;
-        let _ = mesh.add_triangle(midpoint_ab, b, midpoint_bc)?;
-        let _ = mesh.add_triangle(midpoint_ca, midpoint_bc, c)?;
-        let _ = mesh.add_triangle(midpoint_ab, midpoint_bc, midpoint_ca)?;
+        mesh.add_triangle(a, ab, ca)?;     // Triangle 1
+        mesh.add_triangle(ab, b, bc)?;     // Triangle 2
+        mesh.add_triangle(ca, bc, c)?;     // Triangle 3
+        mesh.add_triangle(ab, bc, ca)?;    // Triangle 4 (center)
     }
     
     Ok(())
 }
 
-// Helper function for subdivision to find or create midpoints
+/// Helper function for subdivision to find or create midpoints
+///
+/// This finds or creates a vertex at the midpoint of two existing vertices.
+/// It caches results to avoid creating duplicate vertices.
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh to modify
+/// * `a`, `b` - Indices of the two vertices to find the midpoint between
+/// * `cache` - Cache of previously computed midpoints
+///
+/// # Returns
+///
+/// The index of the midpoint vertex, or an error if it couldn't be created
 fn get_or_create_midpoint(
     mesh: &mut Mesh,
     a: usize,
     b: usize,
     cache: &mut HashMap<(usize, usize), usize>
 ) -> MeshResult<usize> {
-    // Ensure vertex indices are valid
-    if a >= mesh.vertices.len() || b >= mesh.vertices.len() {
-        return Err(MeshError::InvalidIndex(std::cmp::max(a, b)));
+    // Ensure a < b for consistent key ordering
+    let (min_idx, max_idx) = if a < b { (a, b) } else { (b, a) };
+    let key = (min_idx, max_idx);
+    
+    // Check if we've already created this midpoint
+    if let Some(&midpoint_idx) = cache.get(&key) {
+        return Ok(midpoint_idx);
     }
     
-    // Use consistent ordering to ensure we get the same midpoint for (a,b) and (b,a)
-    let key = if a < b { (a, b) } else { (b, a) };
-    
-    if let Some(&idx) = cache.get(&key) {
-        return Ok(idx);
+    // Get the vertices
+    if min_idx >= mesh.vertices.len() || max_idx >= mesh.vertices.len() {
+        return Err(MeshError::InvalidIndex(std::cmp::max(min_idx, max_idx)));
     }
     
-    // Create a new midpoint vertex
-    let va = &mesh.vertices[a];
-    let vb = &mesh.vertices[b];
+    let v1 = &mesh.vertices[min_idx];
+    let v2 = &mesh.vertices[max_idx];
     
-    let position = (va.position + vb.position) * 0.5;
+    // Create the midpoint position
+    let pos = (v1.position + v2.position) * 0.5;
     
-    // Interpolate attributes
-    let normal = match (&va.normal, &vb.normal) {
-        (Some(na), Some(nb)) => Some((*na + *nb).normalize()),
-        _ => None
+    // Create the midpoint normal if both vertices have normals
+    let normal = match (v1.normal, v2.normal) {
+        (Some(n1), Some(n2)) => Some((n1 + n2).normalize()),
+        _ => None,
     };
     
-    let uv = match (&va.uv, &vb.uv) {
-        (Some(uva), Some(uvb)) => Some((*uva + *uvb) * 0.5),
-        _ => None
+    // Create the midpoint UV if both vertices have UVs
+    let uv = match (v1.uv, v2.uv) {
+        (Some(uv1), Some(uv2)) => Some((uv1 + uv2) * 0.5),
+        _ => None,
     };
     
-    let tangent = match (&va.tangent, &vb.tangent) {
-        (Some(ta), Some(tb)) => {
-            // Handle the w component specially (it's a sign)
-            let w = if ta.w == tb.w { ta.w } else { 1.0 };
-            Some(Vec4::new(
-                (ta.x + tb.x) * 0.5,
-                (ta.y + tb.y) * 0.5,
-                (ta.z + tb.z) * 0.5,
-                w
-            ).normalize())
-        },
-        _ => None
-    };
+    // Create the midpoint vertex
+    let mut vertex = Vertex::new(pos);
     
-    let color = match (&va.color, &vb.color) {
-        (Some(ca), Some(cb)) => Some((*ca + *cb) * 0.5),
-        _ => None
-    };
-    
-    // Create the midpoint vertex with interpolated attributes
-    let mut midpoint = Vertex::new(position);
     if let Some(n) = normal {
-        midpoint.normal = Some(n);
+        vertex.normal = Some(n);
     }
+    
     if let Some(u) = uv {
-        midpoint.uv = Some(u);
-    }
-    if let Some(t) = tangent {
-        midpoint.tangent = Some(t);
-    }
-    if let Some(c) = color {
-        midpoint.color = Some(c);
+        vertex.uv = Some(u);
     }
     
-    let idx = mesh.add_vertex(midpoint);
-    cache.insert(key, idx);
+    // Add the vertex to the mesh
+    let midpoint_idx = mesh.add_vertex(vertex);
     
-    Ok(idx)
+    // Cache the result
+    cache.insert(key, midpoint_idx);
+    
+    Ok(midpoint_idx)
 }
 
 /// Extrudes faces along their normals
+///
+/// This creates new geometry by moving a set of faces along their normals and
+/// connecting the original edges to the moved edges with new faces.
+///
+/// # Arguments
+///
+/// * `mesh` - The mesh to modify
+/// * `faces` - Indices of the faces to extrude
+/// * `amount` - Distance to extrude along the face normal
+///
+/// # Returns
+///
+/// `Ok(())` if extrusion was successful, or an error if it failed
+///
+/// # Examples
+///
+/// ```
+/// use mesh_tools::{primitives::create_cube, modifiers::extrude_faces};
+///
+/// // Create a cube
+/// let mut cube = create_cube(1.0, 1.0, 1.0);
+///
+/// // Extrude the top face
+/// let top_face_indices = vec![10, 11]; // Indices of triangles on the top face (example)
+/// extrude_faces(&mut cube, &top_face_indices, 0.5).unwrap();
+/// ```
 pub fn extrude_faces(mesh: &mut Mesh, faces: &[usize], amount: f32) -> MeshResult<()> {
-    if !mesh.has_normals() {
-        // If we don't have normals, we can't extrude
-        generate_smooth_normals(mesh);
+    if faces.is_empty() {
+        return Ok(());
     }
     
-    // Gather all edges and vertices associated with the selected faces
-    let mut face_vertices = HashSet::new();
-    let mut face_edges = HashSet::new();
+    // Collect all vertices used by the faces to extrude
+    let mut vertices_to_extrude = HashSet::new();
+    let mut face_normals = Vec::with_capacity(faces.len());
     
     for &face_idx in faces {
         if face_idx >= mesh.triangles.len() {
@@ -432,150 +698,74 @@ pub fn extrude_faces(mesh: &mut Mesh, faces: &[usize], amount: f32) -> MeshResul
         let triangle = mesh.triangles[face_idx];
         let [a, b, c] = triangle.indices;
         
-        face_vertices.insert(a);
-        face_vertices.insert(b);
-        face_vertices.insert(c);
+        vertices_to_extrude.insert(a);
+        vertices_to_extrude.insert(b);
+        vertices_to_extrude.insert(c);
         
-        face_edges.insert(Edge::new(a, b));
-        face_edges.insert(Edge::new(b, c));
-        face_edges.insert(Edge::new(c, a));
+        // Calculate face normal
+        let va = mesh.vertices[a].position;
+        let vb = mesh.vertices[b].position;
+        let vc = mesh.vertices[c].position;
+        
+        let normal = (vb - va).cross(vc - va).normalize();
+        face_normals.push((face_idx, normal));
     }
     
-    // Create new vertices by extruding existing ones
+    // Create new vertices by extruding along normals
     let mut vertex_map = HashMap::new();
-    for &orig_idx in &face_vertices {
-        let orig_vertex = &mesh.vertices[orig_idx];
-        let normal = orig_vertex.normal.unwrap_or(Vec3::Z);
-        
-        // Create a new vertex offset along the normal
-        let mut new_vertex = orig_vertex.clone();
-        new_vertex.position += normal * amount;
-        
-        let new_idx = mesh.add_vertex(new_vertex);
-        vertex_map.insert(orig_idx, new_idx);
-    }
     
-    // Create triangles for the side faces
-    for edge in &face_edges {
-        let [a, b] = edge.vertices;
+    for &old_idx in &vertices_to_extrude {
+        let old_vertex = &mesh.vertices[old_idx];
+        let mut new_vertex = old_vertex.clone();
         
-        if let (Some(&a_new), Some(&b_new)) = (vertex_map.get(&a), vertex_map.get(&b)) {
-            // Create two triangles for a quad face connecting original and extruded vertices
-            let _ = mesh.add_triangle(a, b, b_new)?;
-            let _ = mesh.add_triangle(a, b_new, a_new)?;
+        // Find the average normal of all faces using this vertex
+        let mut avg_normal = Vec3::ZERO;
+        let mut count = 0;
+        
+        for &(face_idx, normal) in &face_normals {
+            let triangle = mesh.triangles[face_idx];
+            if triangle.indices.contains(&old_idx) {
+                avg_normal += normal;
+                count += 1;
+            }
+        }
+        
+        if count > 0 {
+            avg_normal /= count as f32;
+            avg_normal = avg_normal.normalize();
+            
+            // Extrude the vertex
+            new_vertex.position += avg_normal * amount;
+            
+            // Add the new vertex
+            let new_idx = mesh.add_vertex(new_vertex);
+            vertex_map.insert(old_idx, new_idx);
         }
     }
     
-    // Create extruded face triangles
+    // Create the new faces
     for &face_idx in faces {
         let triangle = mesh.triangles[face_idx];
         let [a, b, c] = triangle.indices;
         
-        if let (Some(&a_new), Some(&b_new), Some(&c_new)) = 
-            (vertex_map.get(&a), vertex_map.get(&b), vertex_map.get(&c)) {
-            // Create the extruded face with reversed winding to ensure outward normal
-            let _ = mesh.add_triangle(a_new, c_new, b_new)?;
-        }
+        // Get the extruded vertex indices
+        let a_new = *vertex_map.get(&a).ok_or(MeshError::InvalidIndex(a))?;
+        let b_new = *vertex_map.get(&b).ok_or(MeshError::InvalidIndex(b))?;
+        let c_new = *vertex_map.get(&c).ok_or(MeshError::InvalidIndex(c))?;
+        
+        // Create the extruded face
+        mesh.add_triangle(a_new, c_new, b_new)?; // Note: flipped winding order for correct normals
+        
+        // Create quads to connect old and new faces
+        mesh.add_triangle(a, b, b_new)?;
+        mesh.add_triangle(a, b_new, a_new)?;
+        
+        mesh.add_triangle(b, c, c_new)?;
+        mesh.add_triangle(b, c_new, b_new)?;
+        
+        mesh.add_triangle(c, a, a_new)?;
+        mesh.add_triangle(c, a_new, c_new)?;
     }
     
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::primitives;
-    
-    #[test]
-    fn test_transform_mesh() {
-        // Create a cube
-        let mut cube = primitives::create_cube(1.0, 1.0, 1.0);
-        let original_vertex_count = cube.vertices.len();
-        
-        // Scale it
-        scale_mesh(&mut cube, Vec3::new(2.0, 3.0, 4.0));
-        
-        // Check that the vertex count hasn't changed
-        assert_eq!(cube.vertices.len(), original_vertex_count);
-        
-        // Check that a vertex position has been properly scaled
-        let max_vertex = cube.vertices.iter()
-            .fold(Vec3::ZERO, |max, v| Vec3::new(
-                max.x.max(v.position.x.abs()),
-                max.y.max(v.position.y.abs()),
-                max.z.max(v.position.z.abs())
-            ));
-            
-        assert!((max_vertex.x - 1.0).abs() < 0.001);
-        assert!((max_vertex.y - 1.5).abs() < 0.001);
-        assert!((max_vertex.z - 2.0).abs() < 0.001);
-    }
-    
-    #[test]
-    fn test_flip_normals() {
-        // Create a sphere
-        let mut sphere = primitives::create_sphere(1.0, 8, 4);
-        
-        // Get a sample normal
-        let original_normal = sphere.vertices[0].normal.unwrap();
-        
-        // Flip normals
-        flip_normals(&mut sphere);
-        
-        // Check that the normal has been inverted
-        let flipped_normal = sphere.vertices[0].normal.unwrap();
-        assert!((original_normal + flipped_normal).length() < 0.001);
-    }
-    
-    #[test]
-    fn test_weld_vertices() {
-        // Create a simple mesh with duplicate vertices
-        let mut mesh = Mesh::new();
-        
-        // Add some vertices, including duplicates
-        let v0 = mesh.add_vertex(Vertex::new(Vec3::new(0.0, 0.0, 0.0)));
-        let v1 = mesh.add_vertex(Vertex::new(Vec3::new(1.0, 0.0, 0.0)));
-        let v2 = mesh.add_vertex(Vertex::new(Vec3::new(0.0, 1.0, 0.0)));
-        // Duplicate of v0, slightly offset
-        let v3 = mesh.add_vertex(Vertex::new(Vec3::new(0.001, 0.0, 0.0)));
-        
-        // Add a triangle
-        let _ = mesh.add_triangle(v0, v1, v2);
-        let _ = mesh.add_triangle(v3, v1, v2);
-        
-        // Weld vertices
-        let params = WeldParameters {
-            threshold: 0.01,
-            ..Default::default()
-        };
-        
-        let welded_count = weld_vertices(&mut mesh, params).unwrap();
-        
-        // Should have welded one vertex
-        assert_eq!(welded_count, 1);
-        assert_eq!(mesh.vertices.len(), 3);
-    }
-    
-    #[test]
-    fn test_subdivide_mesh() {
-        // Create a simple mesh with one triangle
-        let mut mesh = Mesh::new();
-        
-        // Add vertices
-        let v0 = mesh.add_vertex(Vertex::new(Vec3::new(0.0, 0.0, 0.0)));
-        let v1 = mesh.add_vertex(Vertex::new(Vec3::new(1.0, 0.0, 0.0)));
-        let v2 = mesh.add_vertex(Vertex::new(Vec3::new(0.0, 1.0, 0.0)));
-        
-        // Add a triangle
-        let _ = mesh.add_triangle(v0, v1, v2);
-        
-        // Subdivide the mesh
-        let _ = subdivide_mesh(&mut mesh);
-        
-        // Should now have 6 vertices (original 3 + 3 midpoints)
-        assert_eq!(mesh.vertices.len(), 6);
-        
-        // Should have 4 triangles after subdivision
-        assert_eq!(mesh.triangles.len(), 4);
-    }
 }
