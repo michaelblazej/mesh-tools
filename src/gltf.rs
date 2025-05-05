@@ -12,8 +12,8 @@ use std::path::Path;
 use std::fs::File;
 use byteorder::{LittleEndian, WriteBytesExt};
 use serde::{Serialize, Deserialize};
-use glam::{Vec2, Vec3, Vec4, Mat4};
-use crate::mesh::{Mesh, Vertex};
+use glam::{Vec2, Vec3, Vec4};
+use crate::mesh::Mesh;
 
 // Magic header for GLB format
 const GLB_MAGIC: u32 = 0x46546C67; // "glTF" in ASCII
@@ -366,7 +366,7 @@ pub struct GltfMesh {
 }
 
 /// The material appearance of a primitive
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Material {
     /// The name of the material
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1069,7 +1069,7 @@ pub fn export_to_glb_with_options<P: AsRef<Path>>(mesh: &Mesh, path: P, options:
         .collect::<Vec<u32>>();
     
     // Serialize all the vertex and index data
-    let mut buffer_data = Vec::with_capacity(binary_data_size);
+    let mut buffer_data: Vec<u8> = Vec::with_capacity(binary_data_size);
     buffer_data.extend_from_slice(bytemuck::cast_slice(&binary_data));
     
     // Add indices

@@ -6,7 +6,7 @@
 //! - Edge: Represents a connection between two vertices
 //! - Mesh: Container for vertices and triangles
 
-use glam::{Vec2, Vec3, Vec4};
+use glam::{Vec2, Vec3, Vec4, Mat3, Mat4};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -397,16 +397,20 @@ impl Mesh {
     }
     
     /// Create a transformed copy of this mesh
-    pub fn transformed(&self, transform: &glam::Mat4) -> Self {
+    pub fn transformed(&self, transform: &Mat4) -> Self {
         let mut result = self.clone();
         result.transform(transform);
         result
     }
     
     /// Transform this mesh in place
-    pub fn transform(&mut self, transform: &glam::Mat4) {
+    pub fn transform(&mut self, transform: &Mat4) {
         // Get the normal matrix (inverse transpose of the 3x3 portion of the transform)
-        let normal_matrix = transform.inverse().transpose().mat3();
+        let normal_matrix = Mat3::from_cols(
+            transform.inverse().transpose().x_axis.truncate(),
+            transform.inverse().transpose().y_axis.truncate(),
+            transform.inverse().transpose().z_axis.truncate()
+        );
         
         for vertex in &mut self.vertices {
             // Transform position
