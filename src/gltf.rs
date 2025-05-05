@@ -401,7 +401,7 @@ pub struct Material {
 }
 
 /// A set of parameter values that define the metallic-roughness material model
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct PbrMetallicRoughness {
     /// The base color factor
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -424,7 +424,7 @@ pub struct PbrMetallicRoughness {
 }
 
 /// Reference to a texture
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct TextureInfo {
     /// The index of the texture
     pub index: usize,
@@ -437,7 +437,7 @@ pub struct TextureInfo {
 }
 
 /// Normal texture information
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct NormalTextureInfo {
     /// The index of the texture
     pub index: usize,
@@ -453,7 +453,7 @@ pub struct NormalTextureInfo {
 }
 
 /// Occlusion texture information
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct OcclusionTextureInfo {
     /// The index of the texture
     pub index: usize,
@@ -659,7 +659,7 @@ impl GltfRoot {
         // Setup binary buffer
         let mut buffer_views = Vec::new();
         let mut accessors = Vec::new();
-        let mut binary_data = Vec::new();
+        let mut binary_data: Vec<u8> = Vec::new();
         
         // Create primitive
         let mut primitive = Primitive::default();

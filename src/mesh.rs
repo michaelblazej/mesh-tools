@@ -418,12 +418,12 @@ impl Mesh {
             
             // Transform normal
             if let Some(ref mut normal) = vertex.normal {
-                *normal = normal_matrix.transform_vector3(*normal).normalize();
+                *normal = (normal_matrix * *normal).normalize();
             }
             
             // Transform tangent
             if let Some(ref mut tangent) = vertex.tangent {
-                let t = normal_matrix.transform_vector3(Vec3::new(tangent.x, tangent.y, tangent.z)).normalize();
+                let t = (normal_matrix * Vec3::new(tangent.x, tangent.y, tangent.z)).normalize();
                 tangent.x = t.x;
                 tangent.y = t.y;
                 tangent.z = t.z;
