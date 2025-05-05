@@ -147,7 +147,7 @@ pub fn create_box(params: &BoxParameters) -> Mesh {
         height_segments,
         params.width,
         params.height,
-        |u, v| Vec3::new(half_width, v * params.height - half_height, -half_depth),
+        |_u, v| Vec3::new(half_width, v * params.height - half_height, -half_depth),
         |_, _| Vec3::new(0.0, 0.0, -1.0),
         false,
     ); // Front face (-Z)
@@ -158,7 +158,7 @@ pub fn create_box(params: &BoxParameters) -> Mesh {
         height_segments,
         params.width,
         params.height,
-        |u, v| Vec3::new(half_width, v * params.height - half_height, half_depth),
+        |_u, v| Vec3::new(half_width, v * params.height - half_height, half_depth),
         |_, _| Vec3::new(0.0, 0.0, 1.0),
         true,
     ); // Back face (+Z)
@@ -249,12 +249,12 @@ fn create_box_face<P, N>(
     // Create triangles
     let stride = width_segments + 1;
     
-    for iy in 0..height_segments {
-        for ix in 0..width_segments {
-            let a = first_vertex_index + ix + iy * stride;
-            let b = first_vertex_index + ix + (iy + 1) * stride;
-            let c = first_vertex_index + (ix + 1) + (iy + 1) * stride;
-            let d = first_vertex_index + (ix + 1) + iy * stride;
+    for iy in 0..height_segments as usize {
+        for ix in 0..width_segments as usize {
+            let a = first_vertex_index + ix as u32 + (iy as u32 * stride);
+            let b = first_vertex_index + ix as u32 + ((iy as u32 + 1) * stride);
+            let c = first_vertex_index + (ix as u32 + 1) + ((iy as u32 + 1) * stride);
+            let d = first_vertex_index + (ix as u32 + 1) + (iy as u32 * stride);
             
             if flip {
                 mesh.triangles.push(Triangle::new(a, c, b));
@@ -328,8 +328,8 @@ pub fn create_cylinder(params: &CylinderParameters) -> Mesh {
     }
     
     // Create side triangles
-    for iy in 0..height_segments {
-        for ix in 0..radial_segments {
+    for iy in 0..height_segments as usize {
+        for ix in 0..radial_segments as usize {
             let a = vertex_indices[iy][ix];
             let b = vertex_indices[iy + 1][ix];
             let c = vertex_indices[iy + 1][ix + 1];
@@ -421,10 +421,10 @@ fn create_cylinder_cap(
     }
     
     // Cap triangles
-    for ix in 0..radial_segments {
+    for ix in 0..radial_segments as usize {
         let a = center_index;
-        let b = first_vertex + ix;
-        let c = first_vertex + ix + 1;
+        let b = first_vertex + ix as u32;
+        let c = first_vertex + (ix + 1) as u32;
         
         if is_top {
             mesh.triangles.push(Triangle::new(a, b, c));
@@ -490,8 +490,8 @@ pub fn create_disk(params: &DiskParameters) -> Mesh {
     }
     
     // Create triangles
-    for ir in 0..radial_segments {
-        for it in 0..theta_segments {
+    for ir in 0..radial_segments as usize {
+        for it in 0..theta_segments as usize {
             let a = vertex_indices[ir][it];
             let b = vertex_indices[ir + 1][it];
             let c = vertex_indices[ir + 1][it + 1];
@@ -543,15 +543,15 @@ pub fn create_plane(params: &PlaneParameters) -> Mesh {
     }
     
     // Create triangles
-    for iy in 0..grid_y {
-        for ix in 0..grid_x {
-            let a = ix + (grid_x + 1) * iy;
-            let b = ix + (grid_x + 1) * (iy + 1);
-            let c = (ix + 1) + (grid_x + 1) * (iy + 1);
-            let d = (ix + 1) + (grid_x + 1) * iy;
+    for iy in 0..grid_y as usize {
+        for ix in 0..grid_x as usize {
+            let a = (ix + (grid_x as usize + 1) * iy) as u32;
+            let b = (ix + (grid_x as usize + 1) * (iy + 1)) as u32;
+            let c = ((ix + 1) + (grid_x as usize + 1) * (iy + 1)) as u32;
+            let d = ((ix + 1) + (grid_x as usize + 1) * iy) as u32;
             
-            mesh.triangles.push(Triangle::new(a as u32, b as u32, d as u32));
-            mesh.triangles.push(Triangle::new(b as u32, c as u32, d as u32));
+            mesh.triangles.push(Triangle::new(a, b, d));
+            mesh.triangles.push(Triangle::new(b, c, d));
         }
     }
     
