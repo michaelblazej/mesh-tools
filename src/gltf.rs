@@ -13,7 +13,7 @@ use std::fs::File;
 use byteorder::{LittleEndian, WriteBytesExt};
 use serde::{Serialize, Deserialize};
 use glam::{Vec2, Vec3, Vec4, Mat4};
-use crate::{Mesh, Vertex};
+use crate::mesh::{Mesh, Vertex};
 
 // Magic header for GLB format
 const GLB_MAGIC: u32 = 0x46546C67; // "glTF" in ASCII
