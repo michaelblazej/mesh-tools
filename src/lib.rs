@@ -15,19 +15,16 @@ pub use gltf::{
     ExportMesh, GlbExportOptions,
 };
 
+// Re-export primitive shape generators
+pub use primitives::{
+    create_box, create_cylinder, create_disk, create_plane,
+    BoxParameters, CylinderParameters, DiskParameters, PlaneParameters,
+};
+
 // Include modules
 pub mod gltf;
 pub mod mesh;
-
-// Add primitives module stub for future implementation
-pub mod primitives {
-    //! Primitive shape generators for creating basic 3D shapes
-    //!
-    //! This module provides functions to create primitive shapes like
-    //! cubes, spheres, cones, cylinders, tori, planes, and ico-spheres.
-    
-    // Placeholder for future implementation
-}
+pub mod primitives;
 
 #[cfg(test)]
 mod tests {
