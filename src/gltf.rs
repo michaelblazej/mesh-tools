@@ -109,7 +109,7 @@ struct GlbWriter {
 }
 
 impl GlbWriter {
-    /// Create a new GLB writer
+    /// Create a new GLB writer with empty buffers
     fn new() -> Self {
         Self {
             json_chunk: Vec::new(),
@@ -118,8 +118,13 @@ impl GlbWriter {
     }
 
     /// Set the JSON chunk content
-    fn set_json(&mut self, json: String) {
-        self.json_chunk = json.into_bytes();
+    fn set_json(&mut self, json: &[u8]) {
+        self.json_chunk = json.to_vec();
+    }
+
+    /// Set the binary chunk content
+    fn set_bin(&mut self, bin: &[u8]) {
+        self.bin_chunk = bin.to_vec();
     }
 
     /// Add data to the binary buffer and return the byte offset
@@ -130,64 +135,59 @@ impl GlbWriter {
     }
 
     /// Write the GLB file to the given writer
-    fn write<W: Write>(&self, writer: &mut W) -> io::Result<()> {
-        // Calculate padded lengths
-        let json_padded_length = Self::padded_length(&self.json_chunk);
-        let bin_padded_length = Self::padded_length(&self.bin_chunk);
+    fn write<W: Write>(&mut self, writer: &mut W) -> io::Result<()> {
+        // Ensure 4-byte alignment for JSON and binary data
+        let mut padded_json = self.json_chunk.clone();
+        while padded_json.len() % 4 != 0 {
+            padded_json.push(b' '); // Pad with spaces
+        }
         
-        // Calculate total length (header + chunk headers + padded chunks)
-        let total_length = GLB_HEADER_LENGTH + 
-                          2 * GLB_CHUNK_HEADER_LENGTH + 
-                          json_padded_length + 
-                          bin_padded_length;
+        let mut padded_bin = self.bin_chunk.clone();
+        while padded_bin.len() % 4 != 0 {
+            padded_bin.push(0); // Pad with zeros
+        }
+        
+        // Calculate total file length
+        let total_length = GLB_HEADER_LENGTH
+            + GLB_CHUNK_HEADER_LENGTH + padded_json.len()
+            + GLB_CHUNK_HEADER_LENGTH + padded_bin.len();
+        
+        // Debug output
+        println!("JSON length: {} bytes", self.json_chunk.len());
+        println!("JSON padded length: {} bytes", padded_json.len());
+        println!("Binary length: {} bytes", self.bin_chunk.len());
+        println!("Binary padded length: {} bytes", padded_bin.len());
         
         // Write GLB header
-        writer.write_u32::<LittleEndian>(GLB_MAGIC)?;
-        writer.write_u32::<LittleEndian>(GLB_VERSION)?;
-        writer.write_u32::<LittleEndian>(total_length as u32)?;
+        writer.write_u32::<LittleEndian>(GLB_MAGIC)?; // magic header "glTF"
+        writer.write_u32::<LittleEndian>(GLB_VERSION)?; // version
+        writer.write_u32::<LittleEndian>(total_length as u32)?; // total length
         
-        // Write JSON chunk header
-        writer.write_u32::<LittleEndian>(json_padded_length as u32)?;
+        // Write JSON chunk header (unpadded length goes in the header)
+        writer.write_u32::<LittleEndian>(padded_json.len() as u32)?;
         writer.write_u32::<LittleEndian>(GLB_CHUNK_TYPE_JSON)?;
         
-        // Write JSON chunk data
-        writer.write_all(&self.json_chunk)?;
+        // Write JSON chunk data (already padded)
+        writer.write_all(&padded_json)?;
         
-        // Pad JSON chunk to 4-byte boundary
-        Self::write_padding(writer, &self.json_chunk)?;
-        
-        // Write BIN chunk header
-        writer.write_u32::<LittleEndian>(bin_padded_length as u32)?;
+        // Write BIN chunk header (unpadded length goes in the header)
+        writer.write_u32::<LittleEndian>(padded_bin.len() as u32)?;
         writer.write_u32::<LittleEndian>(GLB_CHUNK_TYPE_BIN)?;
         
-        // Write BIN chunk data
-        writer.write_all(&self.bin_chunk)?;
-        
-        // Pad BIN chunk to 4-byte boundary
-        Self::write_padding(writer, &self.bin_chunk)?;
+        // Write BIN chunk data (already padded)
+        writer.write_all(&padded_bin)?;
         
         Ok(())
     }
-
+    
     /// Calculate the length of a buffer padded to a 4-byte boundary
-    fn padded_length(buffer: &[u8]) -> usize {
-        let remainder = buffer.len() % 4;
+    fn padded_length(length: usize) -> usize {
+        let remainder = length % 4;
         if remainder == 0 {
-            buffer.len()
+            length
         } else {
-            buffer.len() + (4 - remainder)
+            length + (4 - remainder)
         }
-    }
-
-    /// Write padding bytes to align to a 4-byte boundary
-    fn write_padding<W: Write>(writer: &mut W, buffer: &[u8]) -> io::Result<()> {
-        let remainder = buffer.len() % 4;
-        if remainder != 0 {
-            for _ in 0..(4 - remainder) {
-                writer.write_u8(0)?;
-            }
-        }
-        Ok(())
     }
 }
 
@@ -545,6 +545,7 @@ pub struct Accessor {
     /// The number of attributes referenced by this accessor
     pub count: usize,
     /// Specifies if the attribute is a scalar, vector, or matrix
+    #[serde(rename = "type")]
     pub type_: String,
     /// Maximum value of each component in this attribute
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -652,8 +653,8 @@ impl GltfRoot {
         Self::default()
     }
 
-    /// Build a glTF scene from a mesh
-    pub fn from_mesh(mesh: &Mesh, options: &GlbExportOptions) -> Self {
+    /// Create a glTF structure from a mesh
+    pub fn from_mesh(mesh: &Mesh, options: &GlbExportOptions) -> (Self, Vec<u8>) {
         let mut gltf = Self::new();
         
         // Setup binary buffer
@@ -1024,14 +1025,19 @@ impl GltfRoot {
         gltf.meshes = Some(vec![gltf_mesh]);
         gltf.accessors = Some(accessors);
         gltf.bufferViews = Some(buffer_views);
-        gltf.buffers = Some(vec![Buffer {
+        
+        // Create a single buffer that contains all binary data
+        let buffer = Buffer {
             uri: None, // No URI for GLB embedded buffer
             byteLength: binary_data.len(),
             name: Some("buffer".to_string()),
             extras: None,
-        }]);
+        };
         
-        gltf
+        // Ensure buffers array is populated
+        gltf.buffers = Some(vec![buffer]);
+        
+        (gltf, binary_data)
     }
 }
 
@@ -1042,51 +1048,45 @@ pub fn export_to_glb<P: AsRef<Path>>(mesh: &Mesh, path: P) -> io::Result<()> {
 
 /// Export mesh to GLB file with custom options
 pub fn export_to_glb_with_options<P: AsRef<Path>>(mesh: &Mesh, path: P, options: &GlbExportOptions) -> io::Result<()> {
-    let gltf = GltfRoot::from_mesh(mesh, options);
+    // Create a GlTF structure from the mesh
+    let (mut gltf, binary_data) = GltfRoot::from_mesh(mesh, options);
     
-    // Create writer
-    let mut writer = GlbWriter::new();
-    
-    // Convert JSON
-    let json = serde_json::to_string(&gltf)?;
-    writer.set_json(json);
-    
-    // Add binary data
-    // NOTE: In a real implementation, we'd need to extract the actual binary data here
-    // For now, I'm simulating this by creating a vector of the right size
-    let binary_data_size = gltf.buffers.as_ref()
-        .and_then(|buffers| buffers.first())
-        .map(|buffer| buffer.byteLength)
-        .unwrap_or(0);
-    
-    let binary_data = mesh.vertices.iter()
-        .flat_map(|v| [v.position.x, v.position.y, v.position.z])
-        .collect::<Vec<f32>>();
-    
-    // Add indices data
-    let indices_data = mesh.triangles.iter()
-        .flat_map(|t| [t.0, t.1, t.2])
-        .collect::<Vec<u32>>();
-    
-    // Serialize all the vertex and index data
-    let mut buffer_data: Vec<u8> = Vec::with_capacity(binary_data_size);
-    buffer_data.extend_from_slice(bytemuck::cast_slice(&binary_data));
-    
-    // Add indices
-    if mesh.vertices.len() <= 65535 {
-        // Convert to u16 indices
-        let indices_u16 = indices_data.iter().map(|&i| i as u16).collect::<Vec<u16>>();
-        buffer_data.extend_from_slice(bytemuck::cast_slice(&indices_u16));
+    // Debug the buffer structure
+    if let Some(buffers) = &gltf.buffers {
+        println!("Buffer count: {}", buffers.len());
+        for (i, buffer) in buffers.iter().enumerate() {
+            println!("Buffer {}: {} bytes, URI: {:?}", i, buffer.byteLength, buffer.uri);
+        }
     } else {
-        buffer_data.extend_from_slice(bytemuck::cast_slice(&indices_data));
+        println!("No buffers in glTF structure!");
+        
+        // Ensure we have a buffer defined
+        let buffer = Buffer {
+            uri: None, // No URI for GLB embedded buffer
+            byteLength: binary_data.len(),
+            name: Some("buffer".to_string()),
+            extras: None,
+        };
+        gltf.buffers = Some(vec![buffer]);
+        println!("Added a buffer with length: {}", binary_data.len());
     }
     
-    // Add additional attribute data as needed
-    // (We'd need to generate binary data for normals, UVs, etc. based on the options)
+    // Create a GLB writer
+    let mut glb_writer = GlbWriter::new();
     
-    // Write to file
-    let mut file = File::create(path)?;
-    writer.write(&mut file)?;
+    // Set JSON data
+    let json_string = serde_json::to_string(&gltf)?;
+    println!("JSON length: {}", json_string.len());
+    println!("First 50 chars: {}", &json_string[0..50.min(json_string.len())]);
+    println!("Last 50 chars: {}", &json_string[json_string.len() - 50.min(json_string.len())..]);
+    glb_writer.set_json(json_string.as_bytes());
+    
+    // Set binary data
+    glb_writer.set_bin(&binary_data);
+    
+    // Write GLB to file
+    let mut file = File::create(path.as_ref())?;
+    glb_writer.write(&mut file)?;
     
     Ok(())
 }
@@ -1098,7 +1098,7 @@ pub fn export_to_gltf<P: AsRef<Path>>(mesh: &Mesh, path: P) -> io::Result<()> {
 
 /// Export mesh to glTF text file with custom options
 pub fn export_to_gltf_with_options<P: AsRef<Path>>(mesh: &Mesh, path: P, options: &GlbExportOptions) -> io::Result<()> {
-    let gltf = GltfRoot::from_mesh(mesh, options);
+    let gltf = GltfRoot::from_mesh(mesh, options).0;
     
     // Convert JSON with pretty formatting
     let json = serde_json::to_string_pretty(&gltf)?;
