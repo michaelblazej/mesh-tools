@@ -1,0 +1,142 @@
+use image::{DynamicImage, ImageBuffer, Rgba};
+use std::io::Cursor;
+use std::fmt;
+use std::error::Error as StdError;
+
+/// Error type for texture operations
+#[derive(Debug)]
+pub enum TextureError {
+    ImageError(image::ImageError),
+    IoError(std::io::Error),
+}
+
+impl fmt::Display for TextureError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TextureError::ImageError(err) => write!(f, "Image error: {}", err),
+            TextureError::IoError(err) => write!(f, "IO error: {}", err),
+        }
+    }
+}
+
+impl StdError for TextureError {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            TextureError::ImageError(err) => Some(err),
+            TextureError::IoError(err) => Some(err),
+        }
+    }
+}
+
+impl From<image::ImageError> for TextureError {
+    fn from(err: image::ImageError) -> Self {
+        TextureError::ImageError(err)
+    }
+}
+
+impl From<std::io::Error> for TextureError {
+    fn from(err: std::io::Error) -> Self {
+        TextureError::IoError(err)
+    }
+}
+
+/// Result type for texture operations
+pub type Result<T> = std::result::Result<T, TextureError>;
+
+/// Represents a texture format
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TextureFormat {
+    PNG,
+    JPEG,
+}
+
+impl TextureFormat {
+    /// Get the MIME type for this format
+    pub fn mime_type(&self) -> &'static str {
+        match self {
+            TextureFormat::PNG => "image/png",
+            TextureFormat::JPEG => "image/jpeg",
+        }
+    }
+}
+
+/// Generate a checkerboard pattern
+pub fn generate_checkerboard(
+    width: u32,
+    height: u32,
+    cell_size: u32,
+    color1: Rgba<u8>,
+    color2: Rgba<u8>,
+) -> DynamicImage {
+    let mut img = ImageBuffer::new(width, height);
+
+    for y in 0..height {
+        for x in 0..width {
+            let cell_x = x / cell_size;
+            let cell_y = y / cell_size;
+            
+            // If the sum of cell positions is even, use color1, otherwise color2
+            let color = if (cell_x + cell_y) % 2 == 0 {
+                color1
+            } else {
+                color2
+            };
+            
+            img.put_pixel(x, y, color);
+        }
+    }
+
+    DynamicImage::ImageRgba8(img)
+}
+
+/// Convert a dynamic image to PNG bytes
+pub fn image_to_png_bytes(image: &DynamicImage) -> Result<Vec<u8>> {
+    let mut bytes: Vec<u8> = Vec::new();
+    let mut cursor = Cursor::new(&mut bytes);
+    image.write_to(&mut cursor, image::ImageOutputFormat::Png)?;
+    Ok(bytes)
+}
+
+/// Convert a dynamic image to JPEG bytes
+pub fn image_to_jpeg_bytes(image: &DynamicImage, quality: u8) -> Result<Vec<u8>> {
+    let mut bytes: Vec<u8> = Vec::new();
+    let mut cursor = Cursor::new(&mut bytes);
+    image.write_to(&mut cursor, image::ImageOutputFormat::Jpeg(quality))?;
+    Ok(bytes)
+}
+
+/// Convert a dynamic image to bytes based on format
+pub fn image_to_bytes(image: &DynamicImage, format: TextureFormat) -> Result<Vec<u8>> {
+    match format {
+        TextureFormat::PNG => image_to_png_bytes(image),
+        TextureFormat::JPEG => image_to_jpeg_bytes(image, 90), // Default quality
+    }
+}
+
+/// Create a simple UV test pattern (checkerboard)
+pub fn create_uv_test_pattern(width: u32, height: u32) -> DynamicImage {
+    generate_checkerboard(
+        width,
+        height,
+        width / 8, // 8x8 grid
+        Rgba([255, 255, 255, 255]), // White
+        Rgba([0, 0, 0, 255]),       // Black
+    )
+}
+
+/// Create a colored checkerboard pattern
+pub fn create_colored_checkerboard(
+    width: u32, 
+    height: u32,
+    cell_size: u32,
+    color1: [u8; 3],
+    color2: [u8; 3],
+) -> DynamicImage {
+    generate_checkerboard(
+        width,
+        height,
+        cell_size,
+        Rgba([color1[0], color1[1], color1[2], 255]),
+        Rgba([color2[0], color2[1], color2[2], 255]),
+    )
+}
