@@ -122,6 +122,14 @@ The library includes several examples demonstrating different features:
 - `custom_mesh_demo.rs`: Creating custom meshes from vertex data
 - `hierarchy_demo.rs`: Building scene hierarchies with multiple nodes
 
+### Primitives Demo
+
+Below is a screenshot of the primitives demo showing the various shapes with different materials that can be generated with the library:
+
+![Primitives Demo](/docs/primitives_demo.png)
+
+This image shows a plane (green), sphere (blue), cylinder (red), cone (gold), torus (purple), and icosahedron (cyan) arranged in a scene.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
