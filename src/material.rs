@@ -45,12 +45,12 @@ impl MaterialBuilder {
     
     /// Set base color factor
     pub fn with_base_color(mut self, color: [f32; 4]) -> Self {
-        if self.material.pbrMetallicRoughness.is_none() {
-            self.material.pbrMetallicRoughness = Some(PbrMetallicRoughness::default());
+        if self.material.pbr_metallic_roughness.is_none() {
+            self.material.pbr_metallic_roughness = Some(PbrMetallicRoughness::default());
         }
         
-        if let Some(pbr) = &mut self.material.pbrMetallicRoughness {
-            pbr.baseColorFactor = Some(color);
+        if let Some(pbr) = &mut self.material.pbr_metallic_roughness {
+            pbr.base_color_factor = Some(color);
         }
         
         self
@@ -58,12 +58,12 @@ impl MaterialBuilder {
     
     /// Set metallic factor
     pub fn with_metallic_factor(mut self, factor: f32) -> Self {
-        if self.material.pbrMetallicRoughness.is_none() {
-            self.material.pbrMetallicRoughness = Some(PbrMetallicRoughness::default());
+        if self.material.pbr_metallic_roughness.is_none() {
+            self.material.pbr_metallic_roughness = Some(PbrMetallicRoughness::default());
         }
         
-        if let Some(pbr) = &mut self.material.pbrMetallicRoughness {
-            pbr.metallicFactor = Some(factor);
+        if let Some(pbr) = &mut self.material.pbr_metallic_roughness {
+            pbr.metallic_factor = Some(factor);
         }
         
         self
@@ -71,12 +71,12 @@ impl MaterialBuilder {
     
     /// Set roughness factor
     pub fn with_roughness_factor(mut self, factor: f32) -> Self {
-        if self.material.pbrMetallicRoughness.is_none() {
-            self.material.pbrMetallicRoughness = Some(PbrMetallicRoughness::default());
+        if self.material.pbr_metallic_roughness.is_none() {
+            self.material.pbr_metallic_roughness = Some(PbrMetallicRoughness::default());
         }
         
-        if let Some(pbr) = &mut self.material.pbrMetallicRoughness {
-            pbr.roughnessFactor = Some(factor);
+        if let Some(pbr) = &mut self.material.pbr_metallic_roughness {
+            pbr.roughness_factor = Some(factor);
         }
         
         self
@@ -84,16 +84,16 @@ impl MaterialBuilder {
     
     /// Set base color texture
     pub fn with_base_color_texture(mut self, texture_index: usize, tex_coord: Option<usize>) -> Self {
-        if self.material.pbrMetallicRoughness.is_none() {
-            self.material.pbrMetallicRoughness = Some(PbrMetallicRoughness::default());
+        if self.material.pbr_metallic_roughness.is_none() {
+            self.material.pbr_metallic_roughness = Some(PbrMetallicRoughness::default());
         }
         
-        if let Some(pbr) = &mut self.material.pbrMetallicRoughness {
+        if let Some(pbr) = &mut self.material.pbr_metallic_roughness {
             let mut texture_info = TextureInfo::default();
             texture_info.index = texture_index;
-            texture_info.texCoord = tex_coord;
+            texture_info.tex_coord = tex_coord;
             
-            pbr.baseColorTexture = Some(texture_info);
+            pbr.base_color_texture = Some(texture_info);
         }
         
         self
@@ -101,16 +101,16 @@ impl MaterialBuilder {
     
     /// Set metallic roughness texture
     pub fn with_metallic_roughness_texture(mut self, texture_index: usize, tex_coord: Option<usize>) -> Self {
-        if self.material.pbrMetallicRoughness.is_none() {
-            self.material.pbrMetallicRoughness = Some(PbrMetallicRoughness::default());
+        if self.material.pbr_metallic_roughness.is_none() {
+            self.material.pbr_metallic_roughness = Some(PbrMetallicRoughness::default());
         }
         
-        if let Some(pbr) = &mut self.material.pbrMetallicRoughness {
+        if let Some(pbr) = &mut self.material.pbr_metallic_roughness {
             let mut texture_info = TextureInfo::default();
             texture_info.index = texture_index;
-            texture_info.texCoord = tex_coord;
+            texture_info.tex_coord = tex_coord;
             
-            pbr.metallicRoughnessTexture = Some(texture_info);
+            pbr.metallic_roughness_texture = Some(texture_info);
         }
         
         self
@@ -120,10 +120,10 @@ impl MaterialBuilder {
     pub fn with_normal_texture(mut self, texture_index: usize, tex_coord: Option<usize>, scale: Option<f32>) -> Self {
         let mut normal_info = NormalTextureInfo::default();
         normal_info.index = texture_index;
-        normal_info.texCoord = tex_coord;
+        normal_info.tex_coord = tex_coord;
         normal_info.scale = scale;
         
-        self.material.normalTexture = Some(normal_info);
+        self.material.normal_texture = Some(normal_info);
         
         self
     }
@@ -132,10 +132,10 @@ impl MaterialBuilder {
     pub fn with_occlusion_texture(mut self, texture_index: usize, tex_coord: Option<usize>, strength: Option<f32>) -> Self {
         let mut occlusion_info = OcclusionTextureInfo::default();
         occlusion_info.index = texture_index;
-        occlusion_info.texCoord = tex_coord;
+        occlusion_info.tex_coord = tex_coord;
         occlusion_info.strength = strength;
         
-        self.material.occlusionTexture = Some(occlusion_info);
+        self.material.occlusion_texture = Some(occlusion_info);
         
         self
     }
@@ -144,29 +144,29 @@ impl MaterialBuilder {
     pub fn with_emissive_texture(mut self, texture_index: usize, tex_coord: Option<usize>) -> Self {
         let mut texture_info = TextureInfo::default();
         texture_info.index = texture_index;
-        texture_info.texCoord = tex_coord;
+        texture_info.tex_coord = tex_coord;
         
-        self.material.emissiveTexture = Some(texture_info);
+        self.material.emissive_texture = Some(texture_info);
         
         self
     }
     
     /// Set emissive factor
     pub fn with_emissive_factor(mut self, factor: [f32; 3]) -> Self {
-        self.material.emissiveFactor = Some(factor);
+        self.material.emissive_factor = Some(factor);
         self
     }
     
     /// Set alpha mode and cutoff
     pub fn with_alpha_mode(mut self, mode: String, cutoff: Option<f32>) -> Self {
-        self.material.alphaMode = Some(mode);
-        self.material.alphaCutoff = cutoff;
+        self.material.alpha_mode = Some(mode);
+        self.material.alpha_cutoff = cutoff;
         self
     }
     
     /// Set double sided flag
     pub fn with_double_sided(mut self, double_sided: bool) -> Self {
-        self.material.doubleSided = Some(double_sided);
+        self.material.double_sided = Some(double_sided);
         self
     }
     

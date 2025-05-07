@@ -34,7 +34,8 @@ pub struct Gltf {
     pub accessors: Option<Vec<Accessor>>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bufferViews: Option<Vec<BufferView>>,
+    #[serde(rename = "bufferViews")]
+    pub buffer_views: Option<Vec<BufferView>>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
     pub buffers: Option<Vec<Buffer>>,
@@ -52,10 +53,12 @@ pub struct Gltf {
     pub samplers: Option<Vec<Sampler>>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub extensionsUsed: Option<Vec<String>>,
+    #[serde(rename = "extensionsUsed")]
+    pub extensions_used: Option<Vec<String>>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub extensionsRequired: Option<Vec<String>>,
+    #[serde(rename = "extensionsRequired")]
+    pub extensions_required: Option<Vec<String>>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extras: Option<HashMap<String, serde_json::Value>>,
@@ -135,14 +138,17 @@ pub struct Primitive {
 /// Represents a glTF accessor
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Accessor {
-    pub bufferView: usize,
-    pub componentType: usize,
+    #[serde(rename = "bufferView")]
+    pub buffer_view: usize,
+    #[serde(rename = "componentType")]
+    pub component_type: usize,
     pub count: usize,
     #[serde(rename = "type")]
     pub type_: String,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub byteOffset: Option<usize>,
+    #[serde(rename = "byteOffset")]
+    pub byte_offset: Option<usize>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
     pub min: Option<Vec<f32>>,
@@ -158,11 +164,14 @@ pub struct Accessor {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BufferView {
     pub buffer: usize,
-    pub byteOffset: usize,
-    pub byteLength: usize,
+    #[serde(rename = "byteOffset")]
+    pub byte_offset: usize,
+    #[serde(rename = "byteLength")]
+    pub byte_length: usize,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub byteStride: Option<usize>,
+    #[serde(rename = "byteStride")]
+    pub byte_stride: Option<usize>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target: Option<usize>,
@@ -171,7 +180,8 @@ pub struct BufferView {
 /// Represents a glTF buffer
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Buffer {
-    pub byteLength: usize,
+    #[serde(rename = "byteLength")]
+    pub byte_length: usize,
     
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uri: Option<String>,
@@ -184,47 +194,60 @@ pub struct Material {
     pub name: Option<String>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pbrMetallicRoughness: Option<PbrMetallicRoughness>,
+    #[serde(rename = "pbrMetallicRoughness")]
+    pub pbr_metallic_roughness: Option<PbrMetallicRoughness>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub normalTexture: Option<NormalTextureInfo>,
+    #[serde(rename = "normalTexture")]
+    pub normal_texture: Option<NormalTextureInfo>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub occlusionTexture: Option<OcclusionTextureInfo>,
+    #[serde(rename = "occlusionTexture")]
+    pub occlusion_texture: Option<OcclusionTextureInfo>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub emissiveTexture: Option<TextureInfo>,
+    #[serde(rename = "emissiveTexture")]
+    pub emissive_texture: Option<TextureInfo>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub emissiveFactor: Option<[f32; 3]>,
+    #[serde(rename = "emissiveFactor")]
+    pub emissive_factor: Option<[f32; 3]>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub alphaMode: Option<String>,
+    #[serde(rename = "alphaMode")]
+    pub alpha_mode: Option<String>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub alphaCutoff: Option<f32>,
+    #[serde(rename = "alphaCutoff")]
+    pub alpha_cutoff: Option<f32>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub doubleSided: Option<bool>,
+    #[serde(rename = "doubleSided")]
+    pub double_sided: Option<bool>,
 }
 
 /// Represents a glTF PBR material
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct PbrMetallicRoughness {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub baseColorFactor: Option<[f32; 4]>,
+    #[serde(rename = "baseColorFactor")]
+    pub base_color_factor: Option<[f32; 4]>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub baseColorTexture: Option<TextureInfo>,
+    #[serde(rename = "baseColorTexture")]
+    pub base_color_texture: Option<TextureInfo>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub metallicFactor: Option<f32>,
+    #[serde(rename = "metallicFactor")]
+    pub metallic_factor: Option<f32>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub roughnessFactor: Option<f32>,
+    #[serde(rename = "roughnessFactor")]
+    pub roughness_factor: Option<f32>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub metallicRoughnessTexture: Option<TextureInfo>,
+    #[serde(rename = "metallicRoughnessTexture")]
+    pub metallic_roughness_texture: Option<TextureInfo>,
 }
 
 /// Represents basic texture reference information
@@ -233,7 +256,8 @@ pub struct TextureInfo {
     pub index: usize,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub texCoord: Option<usize>,
+    #[serde(rename = "texCoord")]
+    pub tex_coord: Option<usize>,
 }
 
 /// Represents normal texture reference information
@@ -242,7 +266,8 @@ pub struct NormalTextureInfo {
     pub index: usize,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub texCoord: Option<usize>,
+    #[serde(rename = "texCoord")]
+    pub tex_coord: Option<usize>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scale: Option<f32>,
@@ -254,7 +279,8 @@ pub struct OcclusionTextureInfo {
     pub index: usize,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub texCoord: Option<usize>,
+    #[serde(rename = "texCoord")]
+    pub tex_coord: Option<usize>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strength: Option<f32>,
@@ -282,24 +308,30 @@ pub struct Image {
     pub uri: Option<String>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mimeType: Option<String>,
+    #[serde(rename = "mimeType")]
+    pub mime_type: Option<String>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bufferView: Option<usize>,
+    #[serde(rename = "bufferView")]
+    pub buffer_view: Option<usize>,
 }
 
 /// Represents a glTF sampler
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Sampler {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub magFilter: Option<usize>,
+    #[serde(rename = "magFilter")]
+    pub mag_filter: Option<usize>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub minFilter: Option<usize>,
+    #[serde(rename = "minFilter")]
+    pub min_filter: Option<usize>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub wrapS: Option<usize>,
+    #[serde(rename = "wrapS")]
+    pub wrap_s: Option<usize>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub wrapT: Option<usize>,
+    #[serde(rename = "wrapT")]
+    pub wrap_t: Option<usize>,
 }

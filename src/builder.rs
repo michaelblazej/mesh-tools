@@ -48,12 +48,12 @@ impl GltfBuilder {
         gltf.nodes = Some(Vec::new());
         gltf.meshes = Some(Vec::new());
         gltf.accessors = Some(Vec::new());
-        gltf.bufferViews = Some(Vec::new());
+        gltf.buffer_views = Some(Vec::new());
         gltf.buffers = Some(Vec::new());
         
         // Create initial buffer in buffer list
         let buffer = Buffer {
-            byteLength: 0, // Will be updated during export
+            byte_length: 0, // Will be updated during export
             uri: None,     // Will be embedded in GLB
         };
         
@@ -201,11 +201,11 @@ impl GltfBuilder {
                        count: usize, type_: String, byte_offset: Option<usize>,
                        min: Option<Vec<f32>>, max: Option<Vec<f32>>) -> usize {
         let accessor = Accessor {
-            bufferView: buffer_view,
-            componentType: component_type,
+            buffer_view: buffer_view,
+            component_type: component_type,
             count,
             type_,
-            byteOffset: byte_offset,
+            byte_offset: byte_offset,
             min,
             max,
             normalized: None,
@@ -226,18 +226,18 @@ impl GltfBuilder {
                           target: Option<usize>) -> usize {
         let buffer_view = BufferView {
             buffer: 0, // We only use a single buffer
-            byteOffset: byte_offset,
-            byteLength: byte_length,
-            byteStride: None,
+            byte_offset: byte_offset,
+            byte_length: byte_length,
+            byte_stride: None,
             target,
         };
         
-        if let Some(buffer_views) = &mut self.gltf.bufferViews {
+        if let Some(buffer_views) = &mut self.gltf.buffer_views {
             let index = buffer_views.len();
             buffer_views.push(buffer_view);
             index
         } else {
-            self.gltf.bufferViews = Some(vec![buffer_view]);
+            self.gltf.buffer_views = Some(vec![buffer_view]);
             0
         }
     }
@@ -257,7 +257,7 @@ impl GltfBuilder {
         // Update the buffer size in the glTF model
         if let Some(buffers) = &mut self.gltf.buffers {
             if !buffers.is_empty() {
-                buffers[0].byteLength = self.buffer_data.len();
+                buffers[0].byte_length = self.buffer_data.len();
             }
         }
         

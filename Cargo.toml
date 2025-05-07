@@ -1,9 +1,15 @@
 [package]
-name = "gltf-export"
+name = "mesh-tools"
 version = "0.1.0"
 edition = "2021"
-authors = ["Cascade"]
-description = "A Rust library for exporting glTF/GLB files"
+authors = ["Michael Blazej"]
+description = "A Rust library for generating 3D meshes and exporting them to glTF/GLB files"
+license = "MIT"
+repository = "https://github.com/michaelblazej/mesh-tools"
+homepage = "https://github.com/michaelblazej/mesh-tools"
+documentation = "https://github.com/michaelblazej/mesh-tools#readme"
+keywords = ["gltf", "glb", "3d", "mesh", "export", "graphics"]
+categories = ["graphics", "rendering", "game-development", "simulation"]
 
 [dependencies]
 # For serializing/deserializing JSON

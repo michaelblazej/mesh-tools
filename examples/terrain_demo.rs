@@ -1,4 +1,4 @@
-use gltf_export::GltfBuilder;
+use mesh_tools::GltfBuilder;
 use std::error::Error;
 use std::f32::consts::PI;
 

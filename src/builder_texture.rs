@@ -127,10 +127,10 @@ impl GltfBuilder {
     pub fn add_sampler(&mut self, mag_filter: Option<usize>, min_filter: Option<usize>,
                       wrap_s: Option<usize>, wrap_t: Option<usize>) -> usize {
         let sampler = Sampler {
-            magFilter: mag_filter,
-            minFilter: min_filter,
-            wrapS: wrap_s,
-            wrapT: wrap_t,
+            mag_filter: mag_filter,
+            min_filter: min_filter,
+            wrap_s: wrap_s,
+            wrap_t: wrap_t,
         };
         
         if let Some(samplers) = &mut self.gltf.samplers {
@@ -156,8 +156,8 @@ impl GltfBuilder {
         let image = Image {
             name,
             uri: None,
-            mimeType: Some(mime_type),
-            bufferView: Some(buffer_view),
+            mime_type: Some(mime_type),
+            buffer_view: Some(buffer_view),
         };
         
         if let Some(images) = &mut self.gltf.images {

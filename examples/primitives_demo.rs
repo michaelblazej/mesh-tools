@@ -1,4 +1,4 @@
-use gltf_export::GltfBuilder;
+use mesh_tools::GltfBuilder;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Set the green material to be double-sided
     if let Some(materials) = &mut builder.gltf.materials {
         if let Some(material) = materials.get_mut(green_material) {
-            material.doubleSided = Some(true);
+            material.double_sided = Some(true);
         }
     }
     

@@ -1,4 +1,4 @@
-use gltf_export::{GltfBuilder, texture::TextureFormat};
+use mesh_tools::{GltfBuilder, texture::TextureFormat};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {

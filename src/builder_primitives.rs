@@ -348,7 +348,6 @@ impl GltfBuilder {
         attributes.insert("POSITION".to_string(), pos_accessor);
         
         // Add normals if provided
-        let mut normal_accessor = None;
         if let Some(normal_data) = normals {
             let norm_bytes = unsafe {
                 std::slice::from_raw_parts(
@@ -359,7 +358,7 @@ impl GltfBuilder {
             let (norm_offset, norm_length) = self.add_buffer_data(norm_bytes);
             let norm_buffer_view = self.add_buffer_view(norm_offset, norm_length, Some(buffer_view_target::ARRAY_BUFFER));
             
-            normal_accessor = Some(self.add_accessor(
+            let normal_accessor = self.add_accessor(
                 norm_buffer_view,
                 component_type::FLOAT,
                 normal_data.len() / 3,
@@ -367,9 +366,9 @@ impl GltfBuilder {
                 None,
                 None,
                 None
-            ));
+            );
             
-            attributes.insert("NORMAL".to_string(), normal_accessor.unwrap());
+            attributes.insert("NORMAL".to_string(), normal_accessor);
         }
         
         // Add texture coordinates if provided
