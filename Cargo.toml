@@ -8,7 +8,7 @@ license = "MIT"
 repository = "https://github.com/michaelblazej/mesh-tools"
 homepage = "https://github.com/michaelblazej/mesh-tools"
 documentation = "https://github.com/michaelblazej/mesh-tools#readme"
-keywords = ["gltf", "glb", "3d", "mesh", "export", "graphics"]
+keywords = ["gltf", "3d", "mesh", "export", "graphics"]
 categories = ["graphics", "rendering", "game-development", "simulation"]
 
 [dependencies]
