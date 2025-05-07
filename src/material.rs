@@ -1,6 +1,35 @@
+//! # Material Creation and Management
+//!
+//! This module provides utilities for creating and configuring materials in the glTF format.
+//! Materials in glTF use the Physically Based Rendering (PBR) model which simulates how light
+//! interacts with surfaces in a physically accurate way.
+//!
+//! The core of this module is the `MaterialBuilder` struct which provides a builder pattern
+//! for creating materials with various properties:
+//!
+//! - Base color (diffuse color)
+//! - Metallic and roughness factors
+//! - Normal, occlusion, and emissive textures
+//! - Transparency settings
+//! - Double-sided rendering
+//!
+//! ## Example
+//!
+//! ```rust
+//! use gltf_export::material;
+//!
+//! // Create a red metallic material
+//! let red_metal = material::create_metallic_material(
+//!     Some("RedMetal".to_string()),
+//!     [1.0, 0.0, 0.0, 1.0], // Red color
+//!     0.9, // High metallic
+//!     0.2  // Low roughness (shiny)
+//! );
+//! ```
+
 use crate::models::{Material, NormalTextureInfo, OcclusionTextureInfo, PbrMetallicRoughness, TextureInfo};
 
-/// Helper functions for creating and working with materials
+/// Builder for creating and configuring glTF materials with PBR properties
 pub struct MaterialBuilder {
     pub material: Material,
 }

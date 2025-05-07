@@ -1,3 +1,18 @@
+//! # Primitive Shape Generation Implementation
+//!
+//! This module implements the primitive shape generation methods for the `GltfBuilder` struct.
+//! It provides functionality for creating standard 3D shapes such as boxes, spheres, planes,
+//! cylinders, cones, tori, and more.
+//!
+//! Each shape generation method:
+//! 1. Generates the geometry data (vertices, indices, normals, UVs)
+//! 2. Creates the necessary buffer views and accessors
+//! 3. Creates a mesh with the appropriate primitives
+//! 4. Returns the index of the created mesh
+//!
+//! These methods are the high-level interface for the low-level geometry generation
+//! functions in the `primitives` module.
+
 use crate::builder::GltfBuilder;
 use crate::constants::{accessor_type, buffer_view_target, component_type};
 use crate::models::Primitive;
@@ -5,7 +20,22 @@ use crate::primitives;
 use std::collections::HashMap;
 
 impl GltfBuilder {
-    /// Create a simple box mesh
+    /// Create a simple cubic box mesh with the specified size
+    ///
+    /// This method creates a cube centered at the origin with equal dimensions on all sides.
+    /// The cube has properly generated normals and texture coordinates for each face.
+    ///
+    /// # Parameters
+    /// * `size` - The length of each side of the cube
+    ///
+    /// # Returns
+    /// The index of the created mesh in the glTF document's meshes array
+    ///
+    /// # Example
+    /// ```
+    /// let mut builder = GltfBuilder::new();
+    /// let box_mesh = builder.create_box(2.0); // Creates a 2x2x2 cube
+    /// ```
     pub fn create_box(&mut self, size: f32) -> usize {
         // Box centered at origin with given size
         let half_size = size / 2.0;
@@ -414,17 +444,35 @@ impl GltfBuilder {
         self.create_custom_mesh(name, positions, indices, normals, texcoord_sets, material)
     }
     
-    /// Create a plane mesh
+    /// Create a flat plane mesh with subdivisions
+    /// 
+    /// This method creates a flat rectangular plane on the XZ plane (with Y as up).
+    /// The plane is centered at the origin and can be subdivided into a grid of triangles.
+    /// Subdividing the plane is useful for terrain or deformation effects.
     /// 
     /// # Parameters
     /// * `width` - Width of the plane along X axis
     /// * `depth` - Depth of the plane along Z axis 
-    /// * `width_segments` - Number of subdivisions along width
-    /// * `depth_segments` - Number of subdivisions along depth
+    /// * `width_segments` - Number of subdivisions along width (min: 1)
+    /// * `depth_segments` - Number of subdivisions along depth (min: 1)
     /// * `material` - Optional material index to use for the mesh
     /// 
     /// # Returns
-    /// The index of the created mesh
+    /// The index of the created mesh in the glTF document's meshes array
+    /// 
+    /// # Example
+    /// ```
+    /// let mut builder = GltfBuilder::new();
+    /// 
+    /// // Create a material
+    /// let ground_material = builder.create_basic_material(
+    ///     Some("Ground".to_string()),
+    ///     [0.5, 0.5, 0.5, 1.0]
+    /// );
+    /// 
+    /// // Create a 10x10 ground plane with 20x20 grid subdivisions
+    /// let ground_mesh = builder.create_plane(10.0, 10.0, 20, 20, Some(ground_material));
+    /// ```
     pub fn create_plane(&mut self, 
                       width: f32, 
                       depth: f32, 
@@ -438,16 +486,33 @@ impl GltfBuilder {
         self.create_simple_mesh(None, &positions, &indices, Some(&normals), Some(&uvs), material)
     }
     
-    /// Create a sphere mesh
+    /// Create a sphere mesh with specified radius and resolution
+    /// 
+    /// This method creates a UV-mapped sphere centered at the origin. The sphere is generated
+    /// using latitude/longitude segmentation, with vertices distributed evenly around the surface.
     /// 
     /// # Parameters
     /// * `radius` - Radius of the sphere
-    /// * `width_segments` - Number of horizontal subdivisions
-    /// * `height_segments` - Number of vertical subdivisions
+    /// * `width_segments` - Number of horizontal subdivisions (longitude lines, min: 3)
+    /// * `height_segments` - Number of vertical subdivisions (latitude lines, min: 2)
     /// * `material` - Optional material index to use for the mesh
     /// 
     /// # Returns
-    /// The index of the created mesh
+    /// The index of the created mesh in the glTF document's meshes array
+    /// 
+    /// # Example
+    /// ```
+    /// let mut builder = GltfBuilder::new();
+    /// 
+    /// // Create a red material
+    /// let red_material = builder.create_basic_material(
+    ///     Some("Red".to_string()),
+    ///     [1.0, 0.0, 0.0, 1.0]
+    /// );
+    /// 
+    /// // Create a high-detail red sphere with radius 2.0
+    /// let sphere_mesh = builder.create_sphere(2.0, 32, 16, Some(red_material));
+    /// ```
     pub fn create_sphere(&mut self, 
                        radius: f32, 
                        width_segments: usize, 
@@ -460,19 +525,45 @@ impl GltfBuilder {
         self.create_simple_mesh(None, &positions, &indices, Some(&normals), Some(&uvs), material)
     }
     
-    /// Create a cylinder mesh
+    /// Create a cylinder mesh with customizable dimensions
+    /// 
+    /// This method creates a cylinder or a truncated cone (when top and bottom radii differ).
+    /// The cylinder is centered at the origin and extends along the Y axis.
+    /// The cylinder can be open-ended (without caps) or closed with caps.
     /// 
     /// # Parameters
     /// * `radius_top` - Radius at the top of the cylinder
     /// * `radius_bottom` - Radius at the bottom of the cylinder
-    /// * `height` - Height of the cylinder
-    /// * `radial_segments` - Number of subdivisions around the circumference
-    /// * `height_segments` - Number of subdivisions along the height
-    /// * `open_ended` - Whether to include top and bottom caps
+    /// * `height` - Height of the cylinder along the Y axis
+    /// * `radial_segments` - Number of subdivisions around the circumference (min: 3)
+    /// * `height_segments` - Number of subdivisions along the height (min: 1)
+    /// * `open_ended` - When `true`, the cylinder has no top or bottom caps
     /// * `material` - Optional material index to use for the mesh
     /// 
     /// # Returns
-    /// The index of the created mesh
+    /// The index of the created mesh in the glTF document's meshes array
+    /// 
+    /// # Example
+    /// ```
+    /// let mut builder = GltfBuilder::new();
+    /// 
+    /// // Create a blue material
+    /// let blue_material = builder.create_basic_material(
+    ///     Some("Blue".to_string()),
+    ///     [0.0, 0.0, 0.8, 1.0]
+    /// );
+    /// 
+    /// // Create a cylinder with different top and bottom radii (truncated cone)
+    /// let cylinder_mesh = builder.create_cylinder(
+    ///     0.5,   // radius top
+    ///     1.0,   // radius bottom
+    ///     2.0,   // height
+    ///     16,    // radial segments
+    ///     1,     // height segments
+    ///     false, // closed with caps
+    ///     Some(blue_material)
+    /// );
+    /// ```
     pub fn create_cylinder(&mut self, 
                          radius_top: f32, 
                          radius_bottom: f32, 

@@ -1,9 +1,35 @@
+//! # Texture Processing and Management
+//!
+//! This module provides utilities for working with textures in the glTF format.
+//! It includes functionality for loading, converting, and encoding image data to be
+//! used as textures in 3D models.
+//!
+//! The module supports:
+//! - Loading textures from common image formats (PNG, JPEG, etc.)
+//! - Converting between different color formats
+//! - Encoding texture data for inclusion in glTF/GLB files
+//! - Managing texture properties such as filtering, wrapping, and mipmaps
+//!
+//! ## Example
+//!
+//! ```rust
+//! use gltf_export::texture;
+//! use std::path::Path;
+//!
+//! // Load a texture from a file
+//! let path = Path::new("texture.png");
+//! let texture_data = texture::load_texture_from_file(path).unwrap();
+//! ```
+
 use image::{DynamicImage, ImageBuffer, Rgba};
 use std::io::Cursor;
 use std::fmt;
 use std::error::Error as StdError;
 
-/// Error type for texture operations
+/// Error type for texture processing operations
+///
+/// Encapsulates errors that may occur during texture loading, conversion,
+/// or encoding processes.
 #[derive(Debug)]
 pub enum TextureError {
     ImageError(image::ImageError),

@@ -1,7 +1,37 @@
+//! # Mesh Creation and Manipulation
+//!
+//! This module provides utilities for working with 3D meshes in the glTF format.
+//! Meshes in glTF are composed of one or more mesh primitives, each representing
+//! a drawable part of the mesh with its own geometry and material.
+//!
+//! The `MeshBuilder` struct provides a builder pattern for creating mesh objects
+//! with various attributes:
+//! - Vertex positions
+//! - Vertex indices (triangulation)
+//! - Normal vectors
+//! - Texture coordinates (UV mapping)
+//! - Material references
+//!
+//! The module also provides helper functions for processing mesh data such as calculating
+//! attribute mappings for glTF primitives.
+//!
+//! ## Example
+//!
+//! ```rust
+//! use gltf_export::mesh::MeshBuilder;
+//!
+//! // Create a mesh with custom data
+//! let mesh = MeshBuilder::new(Some("CustomMesh".to_string()))
+//!     .with_positions(vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0])
+//!     .with_indices(vec![0, 1, 2])
+//!     .with_normals(vec![0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0])
+//!     .build();
+//! ```
+
 use crate::models::{Primitive, Mesh};
 use std::collections::HashMap;
 
-/// Helper functions for creating mesh primitives and calculating bounds
+/// Builder for creating and configuring 3D mesh objects
 pub struct MeshBuilder {
     builder: Option<Box<dyn FnMut(&[f32], &[u16], Option<&[f32]>, Option<Vec<Vec<f32>>>, Option<usize>) -> Primitive>>,
     positions: Vec<f32>,

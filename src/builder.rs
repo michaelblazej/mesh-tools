@@ -1,3 +1,12 @@
+//! # GltfBuilder: Main Builder Interface
+//!
+//! This module provides the main `GltfBuilder` struct which serves as the primary interface
+//! for creating and exporting glTF/GLB files. It handles the construction of the complete
+//! glTF document including scenes, nodes, meshes, materials, and binary data.
+//!
+//! The builder follows a fluent API pattern where methods can be chained together to
+//! build up the document structure incrementally.
+
 use std::fs::File;
 use std::io::{self, Write, Seek};
 use byteorder::{LittleEndian, WriteBytesExt};
@@ -6,7 +15,14 @@ use serde_json;
 use crate::error::{GltfError, Result};
 use crate::models::*;
 
-/// Build a glTF document for export
+/// The main builder for creating and exporting glTF models
+///
+/// `GltfBuilder` provides methods for:
+/// - Creating primitive shapes (box, sphere, plane, etc.)
+/// - Creating and managing materials
+/// - Creating scene hierarchies with nodes
+/// - Managing buffer data for vertex attributes
+/// - Exporting to glTF and GLB formats
 pub struct GltfBuilder {
     pub gltf: Gltf,
     pub buffer_data: Vec<u8>,

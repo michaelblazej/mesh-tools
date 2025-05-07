@@ -1,6 +1,24 @@
-/// Functions for generating basic primitive shapes
-/// Each function returns the necessary components for a mesh:
-/// (positions, indices, normals, uvs)
+//! # Primitive Shape Generation
+//!
+//! This module provides functions for generating the geometry data (vertices, indices, normals, and UVs)
+//! for basic 3D primitive shapes such as planes, boxes, spheres, cylinders, and more.
+//!
+//! Each generation function follows the same pattern of returning a tuple with the following components:
+//! - `positions`: Vertex coordinates as a flat array of floats (x1, y1, z1, x2, y2, z2, ...)
+//! - `indices`: Triangle indices using u16 values, defining the triangulation of the mesh
+//! - `normals`: Normal vectors as a flat array of floats, matching the positions array
+//! - `uvs`: Texture coordinates as a flat array of floats (u1, v1, u2, v2, ...)
+//!
+//! These mesh components can be directly used with the `GltfBuilder` to create complete 3D meshes.
+//!
+//! ## Example
+//!
+//! ```rust
+//! use gltf_export::primitives::generate_box;
+//! 
+//! // Generate a unit cube (1x1x1)
+//! let (positions, indices, normals, uvs) = generate_box(1.0);
+//! ```
 
 use std::f32::consts::PI;
 

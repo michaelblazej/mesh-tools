@@ -1,7 +1,18 @@
+//! # glTF Data Model Definitions
+//!
+//! This module contains the core data structures that represent a glTF 2.0 document.
+//! These structures match the JSON schema defined in the [glTF 2.0 specification](https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html).
+//!
+//! The structures in this module are designed to be serialized to JSON using serde,
+//! with optional fields that are skipped when None to produce valid glTF JSON.
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Represents a glTF 2.0 document
+/// Represents a complete glTF 2.0 document
+///
+/// A glTF document contains all the resources and metadata needed to represent a 3D scene or model.
+/// It includes scenes, nodes, meshes, materials, textures, and binary data references.
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Gltf {
     #[serde(skip_serializing_if = "Option::is_none")]

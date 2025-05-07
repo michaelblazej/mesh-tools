@@ -130,6 +130,49 @@ Below is a screenshot of the primitives demo showing the various shapes with dif
 
 This image shows a plane (green), sphere (blue), cylinder (red), cone (gold), torus (purple), and icosahedron (cyan) arranged in a scene.
 
+## glTF 2.0 Specification Coverage
+
+The following table shows the current coverage of the [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) features in this library:
+
+| Feature Category | Feature | Support Level | Notes |
+|-----------------|---------|---------------|-------|
+| **Core** |||||
+| | Asset Information | ✅ Full | Version, generator, copyright metadata |
+| | Scenes | ✅ Full | Multiple scenes, default scenes |
+| | Nodes | ✅ Full | Hierarchies, transforms (TRS) |
+| | Buffers | ✅ Full | Binary data handling, GLB chunks |
+| | Buffer Views | ✅ Full | Stride, target support |
+| | Accessors | ✅ Full | All types and component types |
+| **Geometry** |||||
+| | Meshes | ✅ Full | Multiple primitives per mesh |
+| | Primitive Types | ⚠️ Partial | Triangles only, no points or lines |
+| | Morph Targets | ❌ None | Not yet implemented |
+| **Materials** |||||
+| | PBR Materials | ✅ Full | Base color, metallic, roughness |
+| | Alpha Modes | ✅ Full | Opaque, mask, blend modes |
+| | Double Sided | ✅ Full | Flag for double-sided rendering |
+| | Material Variations | ⚠️ Partial | No specular workflow, only metallic |
+| **Textures** |||||
+| | Samplers | ✅ Full | Filter modes, wrap modes |
+| | Images | ✅ Full | Embedded and external references |
+| | Texture Coordinates | ✅ Full | Multiple UV sets |
+| **Animation** |||||
+| | Animation | ❌ None | Not yet implemented |
+| | Skinning | ❌ None | Not yet implemented |
+| **Cameras** |||||
+| | Cameras | ❌ None | Not yet implemented |
+| **Extensions** |||||
+| | KHR_materials_unlit | ❌ None | Not yet implemented |
+| | KHR_texture_transform | ❌ None | Not yet implemented |
+| | KHR_mesh_quantization | ❌ None | Not yet implemented |
+| | Custom Extensions | ❌ None | Not yet implemented |
+
+### Legend
+
+- ✅ **Full**: Complete implementation according to the spec
+- ⚠️ **Partial**: Basic functionality implemented with some limitations
+- ❌ **None**: Feature not implemented yet
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
