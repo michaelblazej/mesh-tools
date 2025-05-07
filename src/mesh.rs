@@ -1,0 +1,159 @@
+use crate::models::{Primitive, Mesh};
+use std::collections::HashMap;
+
+/// Helper functions for creating mesh primitives and calculating bounds
+pub struct MeshBuilder {
+    builder: Option<Box<dyn FnMut(&[f32], &[u16], Option<&[f32]>, Option<Vec<Vec<f32>>>, Option<usize>) -> Primitive>>,
+    positions: Vec<f32>,
+    indices: Vec<u16>,
+    normals: Option<Vec<f32>>,
+    texcoords: Option<Vec<Vec<f32>>>,
+    material: Option<usize>,
+    name: Option<String>,
+}
+
+impl MeshBuilder {
+    /// Create a new mesh builder
+    pub fn new(name: Option<String>) -> Self {
+        Self {
+            builder: None,
+            positions: Vec::new(),
+            indices: Vec::new(),
+            normals: None,
+            texcoords: None,
+            material: None,
+            name,
+        }
+    }
+    
+    /// Set the positions for the mesh
+    pub fn with_positions(mut self, positions: Vec<f32>) -> Self {
+        self.positions = positions;
+        self
+    }
+    
+    /// Set the indices for the mesh
+    pub fn with_indices(mut self, indices: Vec<u16>) -> Self {
+        self.indices = indices;
+        self
+    }
+    
+    /// Set the normals for the mesh
+    pub fn with_normals(mut self, normals: Vec<f32>) -> Self {
+        self.normals = Some(normals);
+        self
+    }
+    
+    /// Set a single set of texture coordinates for the mesh
+    pub fn with_texcoords(mut self, texcoords: Vec<f32>) -> Self {
+        let mut texcoord_sets = Vec::new();
+        texcoord_sets.push(texcoords);
+        self.texcoords = Some(texcoord_sets);
+        self
+    }
+    
+    /// Set multiple sets of texture coordinates for the mesh
+    pub fn with_multiple_texcoords(mut self, texcoord_sets: Vec<Vec<f32>>) -> Self {
+        self.texcoords = Some(texcoord_sets);
+        self
+    }
+    
+    /// Set the material index for the mesh
+    pub fn with_material(mut self, material: usize) -> Self {
+        self.material = Some(material);
+        self
+    }
+    
+    /// Set the primitive builder function
+    pub fn with_primitive_builder(
+        mut self,
+        builder: Box<dyn FnMut(&[f32], &[u16], Option<&[f32]>, Option<Vec<Vec<f32>>>, Option<usize>) -> Primitive>,
+    ) -> Self {
+        self.builder = Some(builder);
+        self
+    }
+    
+    /// Build the mesh
+    pub fn build(self) -> Mesh {
+        let mut mesh = Mesh::default();
+        mesh.name = self.name;
+        
+        let normals_ref = self.normals.as_deref();
+        
+        if let Some(mut builder) = self.builder {
+            let primitive = builder(
+                &self.positions,
+                &self.indices,
+                normals_ref,
+                self.texcoords,
+                self.material,
+            );
+            mesh.primitives.push(primitive);
+        } else {
+            // Default implementation if no builder provided
+            let attributes = HashMap::new();
+            // Would need accessor indices which are typically provided by GltfBuilder
+            
+            let primitive = Primitive {
+                attributes,
+                indices: None, // Would need accessor index
+                material: self.material,
+                mode: None,    // Default to triangles
+            };
+            
+            mesh.primitives.push(primitive);
+        }
+        
+        mesh
+    }
+}
+
+/// Calculate min and max bounds of positions
+pub fn calculate_bounds(positions: &[f32]) -> (Vec<f32>, Vec<f32>) {
+    if positions.is_empty() {
+        return (vec![], vec![]);
+    }
+    
+    // Assuming positions are in format [x1, y1, z1, x2, y2, z2, ...]
+    let components_per_vertex = 3;
+    
+    let mut min = vec![f32::MAX; components_per_vertex];
+    let mut max = vec![f32::MIN; components_per_vertex];
+    
+    for i in (0..positions.len()).step_by(components_per_vertex) {
+        for j in 0..components_per_vertex {
+            if i + j < positions.len() {
+                min[j] = min[j].min(positions[i + j]);
+                max[j] = max[j].max(positions[i + j]);
+            }
+        }
+    }
+    
+    (min, max)
+}
+
+/// Create attribute mapping for mesh primitive
+pub fn create_attribute_mapping(
+    position_accessor: usize,
+    normal_accessor: Option<usize>,
+    texcoord_accessors: Option<Vec<usize>>,
+) -> HashMap<String, usize> {
+    let mut attributes = HashMap::new();
+    
+    // Position attribute is always required
+    attributes.insert("POSITION".to_string(), position_accessor);
+    
+    // Add normal attribute if provided
+    if let Some(normal_index) = normal_accessor {
+        attributes.insert("NORMAL".to_string(), normal_index);
+    }
+    
+    // Add texture coordinate attributes if provided
+    if let Some(texcoord_indices) = texcoord_accessors {
+        for (i, texcoord_index) in texcoord_indices.iter().enumerate() {
+            attributes.insert(format!("TEXCOORD_{}", i), *texcoord_index);
+        }
+    }
+    
+    attributes
+}

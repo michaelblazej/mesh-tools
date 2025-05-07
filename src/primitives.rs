@@ -1,1273 +1,569 @@
-//! # Primitive Mesh Generation
-//! 
-//! This module provides functions to generate common primitive 3D shapes like
-//! cubes, spheres, cylinders, planes, cones, torus, and more. Each primitive
-//! is generated with proper vertices, triangles, normals, and texture coordinates.
-//!
-//! ## Examples
-//!
-//! ```rust
-//! use mesh_tools::primitives::{create_cube, create_sphere, CylinderParams};
-//! use glam::Vec3;
-//!
-//! // Create a simple cube
-//! let cube = create_cube(1.0, 1.0, 1.0);
-//!
-//! // Create a sphere with 32 segments and 16 rings
-//! let sphere = create_sphere(1.0, 32, 16);
-//!
-//! // Create a cylinder with custom parameters
-//! let cylinder_params = CylinderParams {
-//!     radius: 0.5,
-//!     height: 2.0,
-//!     radial_segments: 16,
-//!     height_segments: 1,
-//!     top_cap: true,
-//!     bottom_cap: true,
-//! };
-//! let cylinder = create_cylinder(cylinder_params);
-//! ```
+/// Functions for generating basic primitive shapes
+/// Each function returns the necessary components for a mesh:
+/// (positions, indices, normals, uvs)
 
-use crate::{Mesh, Vertex, Triangle, MeshResult};
-use glam::{Vec2, Vec3};
 use std::f32::consts::PI;
 
-/// Creates a cube mesh centered at the origin with the given dimensions
-///
-/// The cube is created with proper normals and texture coordinates for each face.
-/// The cube's vertices are arranged so that each face has consistent winding order.
-///
-/// # Arguments
-///
-/// * `width` - Width of the cube along the X axis
-/// * `height` - Height of the cube along the Y axis
-/// * `depth` - Depth of the cube along the Z axis
-///
+/// Generate a plane (flat surface) with subdivisions
+/// 
+/// # Parameters
+/// * `width` - Width of the plane along X axis
+/// * `depth` - Depth of the plane along Z axis 
+/// * `width_segments` - Number of subdivisions along width
+/// * `depth_segments` - Number of subdivisions along depth
+/// 
 /// # Returns
-///
-/// A mesh representing the cube
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::primitives::create_cube;
-///
-/// // Create a 2x2x2 cube
-/// let cube = create_cube(2.0, 2.0, 2.0);
-///
-/// // Create a non-uniform cube (box)
-/// let box_mesh = create_cube(1.0, 2.0, 3.0);
-/// ```
-pub fn create_cube(width: f32, height: f32, depth: f32) -> Mesh {
-    let half_width = width / 2.0;
-    let half_height = height / 2.0;
-    let half_depth = depth / 2.0;
+/// Tuple of (positions, indices, normals, uvs)
+pub fn generate_plane(
+    width: f32,
+    depth: f32,
+    width_segments: usize,
+    depth_segments: usize,
+) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+    let width_half = width / 2.0;
+    let depth_half = depth / 2.0;
     
-    let mut mesh = Mesh::new();
+    let grid_x = width_segments;
+    let grid_z = depth_segments;
     
-    // Create vertices for all 8 corners of the cube
-    // Front face (positive z)
-    let v0 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, -half_height, half_depth),
-        Vec3::new(0.0, 0.0, 1.0),
-        Vec2::new(0.0, 0.0),
-    ));
-    let v1 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, -half_height, half_depth),
-        Vec3::new(0.0, 0.0, 1.0),
-        Vec2::new(1.0, 0.0),
-    ));
-    let v2 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, half_height, half_depth),
-        Vec3::new(0.0, 0.0, 1.0),
-        Vec2::new(1.0, 1.0),
-    ));
-    let v3 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, half_height, half_depth),
-        Vec3::new(0.0, 0.0, 1.0),
-        Vec2::new(0.0, 1.0),
-    ));
+    // Segment dimensions not actually used directly in this implementation
+    // but kept for clarity and possible future enhancements
+    let _segment_width = width / grid_x as f32;
+    let _segment_depth = depth / grid_z as f32;
     
-    // Back face (negative z)
-    let v4 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, -half_height, -half_depth),
-        Vec3::new(0.0, 0.0, -1.0),
-        Vec2::new(1.0, 0.0),
-    ));
-    let v5 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, -half_height, -half_depth),
-        Vec3::new(0.0, 0.0, -1.0),
-        Vec2::new(0.0, 0.0),
-    ));
-    let v6 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, half_height, -half_depth),
-        Vec3::new(0.0, 0.0, -1.0),
-        Vec2::new(0.0, 1.0),
-    ));
-    let v7 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, half_height, -half_depth),
-        Vec3::new(0.0, 0.0, -1.0),
-        Vec2::new(1.0, 1.0),
-    ));
+    let mut positions = Vec::new();
+    let mut normals = Vec::new();
+    let mut uvs = Vec::new();
+    let mut indices = Vec::new();
     
-    // Top face (positive y)
-    let v8 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, half_height, -half_depth),
-        Vec3::new(0.0, 1.0, 0.0),
-        Vec2::new(0.0, 0.0),
-    ));
-    let v9 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, half_height, -half_depth),
-        Vec3::new(0.0, 1.0, 0.0),
-        Vec2::new(1.0, 0.0),
-    ));
-    let v10 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, half_height, half_depth),
-        Vec3::new(0.0, 1.0, 0.0),
-        Vec2::new(1.0, 1.0),
-    ));
-    let v11 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, half_height, half_depth),
-        Vec3::new(0.0, 1.0, 0.0),
-        Vec2::new(0.0, 1.0),
-    ));
-    
-    // Bottom face (negative y)
-    let v12 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, -half_height, -half_depth),
-        Vec3::new(0.0, -1.0, 0.0),
-        Vec2::new(0.0, 1.0),
-    ));
-    let v13 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, -half_height, -half_depth),
-        Vec3::new(0.0, -1.0, 0.0),
-        Vec2::new(1.0, 1.0),
-    ));
-    let v14 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, -half_height, half_depth),
-        Vec3::new(0.0, -1.0, 0.0),
-        Vec2::new(1.0, 0.0),
-    ));
-    let v15 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, -half_height, half_depth),
-        Vec3::new(0.0, -1.0, 0.0),
-        Vec2::new(0.0, 0.0),
-    ));
-    
-    // Right face (positive x)
-    let v16 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, -half_height, -half_depth),
-        Vec3::new(1.0, 0.0, 0.0),
-        Vec2::new(0.0, 0.0),
-    ));
-    let v17 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, half_height, -half_depth),
-        Vec3::new(1.0, 0.0, 0.0),
-        Vec2::new(0.0, 1.0),
-    ));
-    let v18 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, half_height, half_depth),
-        Vec3::new(1.0, 0.0, 0.0),
-        Vec2::new(1.0, 1.0),
-    ));
-    let v19 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(half_width, -half_height, half_depth),
-        Vec3::new(1.0, 0.0, 0.0),
-        Vec2::new(1.0, 0.0),
-    ));
-    
-    // Left face (negative x)
-    let v20 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, -half_height, -half_depth),
-        Vec3::new(-1.0, 0.0, 0.0),
-        Vec2::new(1.0, 0.0),
-    ));
-    let v21 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, half_height, -half_depth),
-        Vec3::new(-1.0, 0.0, 0.0),
-        Vec2::new(1.0, 1.0),
-    ));
-    let v22 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, half_height, half_depth),
-        Vec3::new(-1.0, 0.0, 0.0),
-        Vec2::new(0.0, 1.0),
-    ));
-    let v23 = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(-half_width, -half_height, half_depth),
-        Vec3::new(-1.0, 0.0, 0.0),
-        Vec2::new(0.0, 0.0),
-    ));
-    
-    // Add triangles for each face (2 triangles per face)
-    // Front face
-    let _ = mesh.add_triangle(v0, v1, v2);
-    let _ = mesh.add_triangle(v0, v2, v3);
-    
-    // Back face
-    let _ = mesh.add_triangle(v4, v6, v5);
-    let _ = mesh.add_triangle(v4, v7, v6);
-    
-    // Top face
-    let _ = mesh.add_triangle(v8, v9, v10);
-    let _ = mesh.add_triangle(v8, v10, v11);
-    
-    // Bottom face
-    let _ = mesh.add_triangle(v12, v14, v13);
-    let _ = mesh.add_triangle(v12, v15, v14);
-    
-    // Right face
-    let _ = mesh.add_triangle(v16, v17, v18);
-    let _ = mesh.add_triangle(v16, v18, v19);
-    
-    // Left face
-    let _ = mesh.add_triangle(v20, v22, v21);
-    let _ = mesh.add_triangle(v20, v23, v22);
-    
-    mesh
-}
-
-/// Parameters for creating a plane
-///
-/// Defines the dimensions and subdivision of a plane primitive.
-#[derive(Debug, Clone, Copy)]
-pub struct PlaneParams {
-    /// Width of the plane along the X axis
-    pub size: Vec2,
-    /// Number of segments along width and depth
-    pub segments: (u32, u32),
-}
-
-impl Default for PlaneParams {
-    fn default() -> Self {
-        Self {
-            size: Vec2::new(1.0, 1.0),
-            segments: (1, 1),
-        }
-    }
-}
-
-/// Creates a plane mesh with the given parameters
-///
-/// The plane is created on the XZ plane (normal pointing up along Y-axis)
-/// with appropriate normals and texture coordinates.
-///
-/// # Arguments
-///
-/// * `params` - The parameters for the plane
-///
-/// # Returns
-///
-/// A mesh representing the plane
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::primitives::{create_plane, PlaneParams};
-/// use glam::Vec2;
-///
-/// // Create a simple plane with default parameters
-/// let plane = create_plane(PlaneParams::default());
-///
-/// // Create a larger plane with more subdivisions
-/// let subdivided_plane = create_plane(PlaneParams {
-///     size: Vec2::new(10.0, 10.0),
-///     segments: (10, 10),
-/// });
-/// ```
-pub fn create_plane(params: PlaneParams) -> Mesh {
-    create_plane(params.size.x, params.size.y, params.segments.0, params.segments.1)
-}
-
-/// Creates a plane mesh on the XZ plane with the given dimensions
-///
-/// The plane is created with the Y-axis as the normal direction.
-/// Subdivisions are controlled by the width_segments and depth_segments parameters.
-///
-/// # Arguments
-///
-/// * `width` - Width of the plane along the X axis
-/// * `depth` - Depth of the plane along the Z axis
-/// * `width_segments` - Number of segments along the width
-/// * `depth_segments` - Number of segments along the depth
-///
-/// # Returns
-///
-/// A mesh representing the plane
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::primitives::create_plane;
-///
-/// // Create a 2x2 plane with 1 segment
-/// let simple_plane = create_plane(2.0, 2.0, 1, 1);
-///
-/// // Create a 5x5 plane with 10 segments in each direction
-/// let detailed_plane = create_plane(5.0, 5.0, 10, 10);
-/// ```
-pub fn create_plane(width: f32, depth: f32, width_segments: u32, depth_segments: u32) -> Mesh {
-    let mut mesh = Mesh::new();
-    
-    let half_width = width / 2.0;
-    let half_depth = depth / 2.0;
-    
-    let width_segment_size = width / width_segments as f32;
-    let depth_segment_size = depth / depth_segments as f32;
-    
-    // Create a grid of vertices
-    let mut vertex_grid = Vec::with_capacity((width_segments + 1) as usize * (depth_segments + 1) as usize);
-    
-    for z in 0..=depth_segments {
-        for x in 0..=width_segments {
-            let x_pos = -half_width + x as f32 * width_segment_size;
-            let z_pos = -half_depth + z as f32 * depth_segment_size;
+    // Generate vertices, normals and uvs
+    for z in 0..=grid_z {
+        let z_percent = z as f32 / grid_z as f32;
+        
+        for x in 0..=grid_x {
+            let x_percent = x as f32 / grid_x as f32;
             
-            let u = x as f32 / width_segments as f32;
-            let v = z as f32 / depth_segments as f32;
+            let x_pos = x_percent * width - width_half;
+            let z_pos = z_percent * depth - depth_half;
             
-            let vertex_idx = mesh.add_vertex(Vertex::with_all(
-                Vec3::new(x_pos, 0.0, z_pos),
-                Vec3::new(0.0, 1.0, 0.0),
-                Vec2::new(u, v),
-            ));
+            // Position
+            positions.push(x_pos);
+            positions.push(0.0);  // Y is always 0 for a plane
+            positions.push(z_pos);
             
-            vertex_grid.push(vertex_idx);
+            // Normal
+            normals.push(0.0);
+            normals.push(1.0);
+            normals.push(0.0);
+            
+            // UV
+            uvs.push(x_percent);
+            uvs.push(1.0 - z_percent);  // Flip Y for texture coordinates
         }
     }
     
-    // Create triangles
-    for z in 0..depth_segments {
-        for x in 0..width_segments {
-            let stride = width_segments + 1;
-            let idx = z * stride + x;
+    // Generate indices
+    let vertices_per_row = grid_x + 1;
+    
+    for z in 0..grid_z {
+        for x in 0..grid_x {
+            let a = (z * vertices_per_row + x) as u16;
+            let b = (z * vertices_per_row + x + 1) as u16;
+            let c = ((z + 1) * vertices_per_row + x + 1) as u16;
+            let d = ((z + 1) * vertices_per_row + x) as u16;
             
-            let v0 = vertex_grid[idx as usize];
-            let v1 = vertex_grid[(idx + 1) as usize];
-            let v2 = vertex_grid[(idx + stride + 1) as usize];
-            let v3 = vertex_grid[(idx + stride) as usize];
+            // Two triangles per grid cell
+            indices.push(a);
+            indices.push(b);
+            indices.push(d);
             
-            // Add two triangles to form a quad
-            let _ = mesh.add_triangle(v0, v1, v2);
-            let _ = mesh.add_triangle(v0, v2, v3);
+            indices.push(b);
+            indices.push(c);
+            indices.push(d);
         }
     }
     
-    mesh
+    (positions, indices, normals, uvs)
 }
 
-/// Parameters for sphere creation
-///
-/// Defines the size and resolution of a UV-sphere primitive.
-#[derive(Debug, Clone, Copy)]
-pub struct SphereParams {
-    /// Radius of the sphere
-    pub radius: f32,
-    /// Number of segments around the equator
-    pub segments: u32,
-    /// Number of rings from pole to pole
-    pub rings: u32,
-}
-
-impl Default for SphereParams {
-    fn default() -> Self {
-        Self {
-            radius: 0.5,
-            segments: 32,
-            rings: 16,
-        }
-    }
-}
-
-/// Creates a sphere mesh with the given parameters
-///
-/// The sphere is generated using the UV-sphere approach (latitude/longitude).
-/// For a more evenly distributed vertices, consider using `create_icosphere`.
-///
-/// # Arguments
-///
-/// * `params` - The parameters for the sphere
-///
-/// # Returns
-///
-/// A mesh representing the sphere
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::primitives::{create_sphere, SphereParams};
-///
-/// // Create a sphere with default parameters
-/// let sphere = create_sphere(SphereParams::default());
-///
-/// // Create a larger, high-detail sphere
-/// let detailed_sphere = create_sphere(SphereParams {
-///     radius: 1.0,
-///     segments: 64,
-///     rings: 32,
-/// });
-/// ```
-pub fn create_sphere(params: SphereParams) -> Mesh {
-    create_sphere(params.radius, params.segments, params.rings)
-}
-
-/// Creates a sphere mesh using UV-sphere approach
-///
-/// This generates a sphere by creating rings of vertices at different latitudes,
-/// from the south pole to the north pole. The vertices are distributed in a grid
-/// pattern, similar to latitude and longitude lines on a globe.
-///
-/// # Arguments
-///
+/// Generate a sphere with subdivisions
+/// 
+/// # Parameters
 /// * `radius` - Radius of the sphere
-/// * `segments` - Number of segments around the equator (like longitude)
-/// * `rings` - Number of rings from pole to pole (like latitude)
-///
+/// * `width_segments` - Number of horizontal subdivisions
+/// * `height_segments` - Number of vertical subdivisions
+/// 
 /// # Returns
-///
-/// A mesh representing the sphere
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::primitives::create_sphere;
-///
-/// // Create a sphere with radius 1.0 and medium detail
-/// let sphere = create_sphere(1.0, 32, 16);
-///
-/// // Create a high-detail sphere
-/// let hd_sphere = create_sphere(0.5, 64, 32);
-/// ```
-pub fn create_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
-    let mut mesh = Mesh::new();
+/// Tuple of (positions, indices, normals, uvs)
+pub fn generate_sphere(
+    radius: f32,
+    width_segments: usize,
+    height_segments: usize,
+) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+    let width_segments = width_segments.max(3);
+    let height_segments = height_segments.max(2);
     
-    // Create vertices
-    // First, top and bottom vertices (poles)
-    let top_idx = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(0.0, radius, 0.0),
-        Vec3::new(0.0, 1.0, 0.0),
-        Vec2::new(0.5, 0.0),
-    ));
+    let mut positions = Vec::new();
+    let mut normals = Vec::new();
+    let mut uvs = Vec::new();
+    let mut indices = Vec::new();
     
-    let bottom_idx = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(0.0, -radius, 0.0),
-        Vec3::new(0.0, -1.0, 0.0),
-        Vec2::new(0.5, 1.0),
-    ));
-    
-    // Create rings of vertices
-    let mut ring_vertices = Vec::with_capacity((rings - 1) as usize * segments as usize);
-    
-    for ring in 1..rings {
-        let phi = PI * ring as f32 / rings as f32;
-        let y = radius * (-phi.cos());
-        let ring_radius = radius * phi.sin();
+    // Generate vertices, normals and uvs
+    for y in 0..=height_segments {
+        let v = y as f32 / height_segments as f32;
+        let phi = v * PI;
         
-        for segment in 0..segments {
-            let theta = 2.0 * PI * segment as f32 / segments as f32;
-            let x = ring_radius * theta.cos();
-            let z = ring_radius * theta.sin();
+        for x in 0..=width_segments {
+            let u = x as f32 / width_segments as f32;
+            let theta = u * 2.0 * PI;
             
-            let normal = Vec3::new(x, y, z).normalize();
-            let u = segment as f32 / segments as f32;
-            let v = ring as f32 / rings as f32;
+            // Calculate vertex position on the sphere
+            let x_pos = -radius * theta.sin() * phi.sin();
+            let y_pos = radius * phi.cos();
+            let z_pos = radius * theta.cos() * phi.sin();
             
-            let idx = mesh.add_vertex(Vertex::with_all(
-                Vec3::new(x, y, z),
-                normal,
-                Vec2::new(u, v),
-            ));
+            // Position
+            positions.push(x_pos);
+            positions.push(y_pos);
+            positions.push(z_pos);
             
-            ring_vertices.push(idx);
+            // Normal (normalized position)
+            let length = (x_pos * x_pos + y_pos * y_pos + z_pos * z_pos).sqrt();
+            normals.push(x_pos / length);
+            normals.push(y_pos / length);
+            normals.push(z_pos / length);
+            
+            // UV
+            uvs.push(u);
+            uvs.push(1.0 - v);  // Flip V for texture coordinates
         }
     }
     
-    // Create triangles
-    // Top cap
-    for segment in 0..segments {
-        let next_segment = (segment + 1) % segments;
-        let v0 = top_idx;
-        let v1 = ring_vertices[segment as usize];
-        let v2 = ring_vertices[next_segment as usize];
-        
-        let _ = mesh.add_triangle(v0, v1, v2);
-    }
+    // Generate indices
+    let vertices_per_row = width_segments + 1;
     
-    // Middle rings
-    for ring in 0..(rings - 2) {
-        let ring_start = ring * segments;
-        let next_ring_start = (ring + 1) * segments;
-        
-        for segment in 0..segments {
-            let next_segment = (segment + 1) % segments;
+    for y in 0..height_segments {
+        for x in 0..width_segments {
+            let a = (y * vertices_per_row + x) as u16;
+            let b = (y * vertices_per_row + x + 1) as u16;
+            let c = ((y + 1) * vertices_per_row + x + 1) as u16;
+            let d = ((y + 1) * vertices_per_row + x) as u16;
             
-            let v0 = ring_vertices[(ring_start + segment) as usize];
-            let v1 = ring_vertices[(ring_start + next_segment) as usize];
-            let v2 = ring_vertices[(next_ring_start + next_segment) as usize];
-            let v3 = ring_vertices[(next_ring_start + segment) as usize];
+            // Two triangles per grid cell
+            // Except at the poles where we have single triangles
+            if y != 0 {
+                indices.push(a);
+                indices.push(b);
+                indices.push(d);
+            }
             
-            let _ = mesh.add_triangle(v0, v1, v2);
-            let _ = mesh.add_triangle(v0, v2, v3);
+            if y != height_segments - 1 {
+                indices.push(b);
+                indices.push(c);
+                indices.push(d);
+            }
         }
     }
     
-    // Bottom cap
-    let last_ring_start = (rings - 2) * segments;
-    for segment in 0..segments {
-        let next_segment = (segment + 1) % segments;
-        let v0 = bottom_idx;
-        let v1 = ring_vertices[(last_ring_start + next_segment) as usize];
-        let v2 = ring_vertices[(last_ring_start + segment) as usize];
-        
-        let _ = mesh.add_triangle(v0, v1, v2);
-    }
-    
-    mesh
+    (positions, indices, normals, uvs)
 }
 
-/// Parameters for cone creation
-///
-/// Defines the dimensions and resolution of a cone primitive.
-#[derive(Debug, Clone, Copy)]
-pub struct ConeParams {
-    /// Radius at the base of the cone
-    pub radius: f32,
-    /// Height of the cone
-    pub height: f32,
-    /// Number of segments around the base
-    pub segments: u32,
-    /// Whether to include a cap at the base
-    pub cap: bool,
-}
-
-impl Default for ConeParams {
-    fn default() -> Self {
-        Self {
-            radius: 0.5,
-            height: 1.0,
-            segments: 32,
-            cap: true,
-        }
-    }
-}
-
-/// Creates a cone mesh with the specified parameters
-///
-/// The cone is created with its base on the XZ plane and its tip pointing up
-/// along the positive Y axis. The cone includes proper normals and texture
-/// coordinates.
-///
-/// # Arguments
-///
-/// * `params` - Parameters controlling the dimensions and resolution of the cone
-///
+/// Generate a cylinder
+/// 
+/// # Parameters
+/// * `radius_top` - Radius at the top of the cylinder
+/// * `radius_bottom` - Radius at the bottom of the cylinder
+/// * `height` - Height of the cylinder
+/// * `radial_segments` - Number of subdivisions around the circumference
+/// * `height_segments` - Number of subdivisions along the height
+/// * `open_ended` - Whether to include top and bottom caps
+/// 
 /// # Returns
-///
-/// A mesh representing the cone
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::primitives::{create_cone, ConeParams};
-///
-/// // Create a cone with default parameters
-/// let cone = create_cone(ConeParams::default());
-///
-/// // Create a tall, thin cone without a base cap
-/// let thin_cone = create_cone(ConeParams {
-///     radius: 0.3,
-///     height: 2.0,
-///     segments: 16,
-///     cap: false,
-/// });
-/// ```
-pub fn create_cone(params: ConeParams) -> Mesh {
-    let mut mesh = Mesh::new();
+/// Tuple of (positions, indices, normals, uvs)
+pub fn generate_cylinder(
+    radius_top: f32,
+    radius_bottom: f32,
+    height: f32,
+    radial_segments: usize,
+    height_segments: usize,
+    open_ended: bool,
+) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+    let radial_segments = radial_segments.max(3);
+    let height_segments = height_segments.max(1);
     
-    // Create tip vertex at the top
-    let tip_idx = mesh.add_vertex(Vertex::with_all(
-        Vec3::new(0.0, params.height / 2.0, 0.0),
-        Vec3::new(0.0, 1.0, 0.0),
-        Vec2::new(0.5, 0.0),
-    ));
+    let mut positions = Vec::new();
+    let mut normals = Vec::new();
+    let mut uvs = Vec::new();
+    let mut indices = Vec::new();
     
-    // Create vertices for the base
-    let mut base_vertices = Vec::with_capacity(params.segments as usize);
-    let center_idx = if params.cap {
-        Some(mesh.add_vertex(Vertex::with_all(
-            Vec3::new(0.0, -params.height / 2.0, 0.0),
-            Vec3::new(0.0, -1.0, 0.0),
-            Vec2::new(0.5, 1.0),
-        )))
-    } else {
-        None
+    // Helper function to calculate slope normals
+    let get_slope_normal = |_radius: f32, slope_factor: f32, u: f32| -> (f32, f32, f32) {
+        let sin_theta = (u * 2.0 * PI).sin();
+        let cos_theta = (u * 2.0 * PI).cos();
+        
+        let nx = cos_theta;
+        let ny = slope_factor;
+        let nz = sin_theta;
+        
+        // Normalize
+        let length = (nx * nx + ny * ny + nz * nz).sqrt();
+        
+        (nx / length, ny / length, nz / length)
     };
     
-    // Create the base circle
-    for i in 0..params.segments {
-        let theta = 2.0 * PI * i as f32 / params.segments as f32;
-        let x = params.radius * theta.cos();
-        let z = params.radius * theta.sin();
+    // Calculate slope factor for cylinder sides
+    let slope_factor = if radius_top == radius_bottom {
+        0.0 // No slope for a perfect cylinder
+    } else {
+        height / (radius_bottom - radius_top)
+    };
+    
+    // Generate vertices for the curved surface
+    for y in 0..=height_segments {
+        let v = y as f32 / height_segments as f32;
+        let y_pos = v * height - height / 2.0;
+        let radius = radius_bottom + v * (radius_top - radius_bottom);
         
-        // Compute the normal for the side of the cone
-        let side_normal = Vec3::new(x, params.height, z).normalize();
-        
-        let idx = mesh.add_vertex(Vertex::with_all(
-            Vec3::new(x, -params.height / 2.0, z),
-            if params.cap { Vec3::new(0.0, -1.0, 0.0) } else { side_normal },
-            Vec2::new(i as f32 / params.segments as f32, 1.0),
-        ));
-        
-        if !params.cap {
-            let side_idx = mesh.add_vertex(Vertex::with_all(
-                Vec3::new(x, -params.height / 2.0, z),
-                side_normal,
-                Vec2::new(i as f32 / params.segments as f32, 1.0),
-            ));
-            base_vertices.push(side_idx);
-        } else {
-            base_vertices.push(idx);
+        for x in 0..=radial_segments {
+            let u = x as f32 / radial_segments as f32;
+            let theta = u * 2.0 * PI;
+            
+            let sin_theta = theta.sin();
+            let cos_theta = theta.cos();
+            
+            // Position
+            positions.push(radius * cos_theta);
+            positions.push(y_pos);
+            positions.push(radius * sin_theta);
+            
+            // Normal
+            let (nx, ny, nz) = get_slope_normal(radius, slope_factor, u);
+            normals.push(nx);
+            normals.push(ny);
+            normals.push(nz);
+            
+            // UV
+            uvs.push(u);
+            uvs.push(1.0 - v);
         }
     }
     
-    // Create triangles for the cone sides
-    for i in 0..params.segments {
-        let next = (i + 1) % params.segments;
-        let _ = mesh.add_triangle(tip_idx, base_vertices[next as usize], base_vertices[i as usize]);
-    }
+    // Generate indices for the curved surface
+    let vertices_per_row = radial_segments + 1;
     
-    // Create triangles for the base if capped
-    if params.cap && center_idx.is_some() {
-        let center = center_idx.unwrap();
-        for i in 0..params.segments {
-            let next = (i + 1) % params.segments;
-            let _ = mesh.add_triangle(center, base_vertices[i as usize], base_vertices[next as usize]);
+    for y in 0..height_segments {
+        for x in 0..radial_segments {
+            let a = (y * vertices_per_row + x) as u16;
+            let b = (y * vertices_per_row + x + 1) as u16;
+            let c = ((y + 1) * vertices_per_row + x + 1) as u16;
+            let d = ((y + 1) * vertices_per_row + x) as u16;
+            
+            // Two triangles per grid cell
+            indices.push(a);
+            indices.push(b);
+            indices.push(d);
+            
+            indices.push(b);
+            indices.push(c);
+            indices.push(d);
         }
     }
     
-    mesh
-}
-
-/// Parameters for cylinder creation
-///
-/// Defines the dimensions and resolution of a cylinder primitive.
-#[derive(Debug, Clone, Copy)]
-pub struct CylinderParams {
-    /// Radius of the cylinder
-    pub radius: f32,
-    /// Height of the cylinder
-    pub height: f32,
-    /// Number of segments around the circumference
-    pub radial_segments: u32,
-    /// Number of segments along the height
-    pub height_segments: u32,
-    /// Whether to include a cap at the top
-    pub top_cap: bool,
-    /// Whether to include a cap at the bottom
-    pub bottom_cap: bool,
-}
-
-impl Default for CylinderParams {
-    fn default() -> Self {
-        Self {
-            radius: 0.5,
-            height: 1.0,
-            radial_segments: 32,
-            height_segments: 1,
-            top_cap: true,
-            bottom_cap: true,
+    // If not open ended, add top and bottom caps
+    if !open_ended {
+        let start_index = positions.len() / 3;
+        
+        // Top cap
+        // Center vertex
+        positions.push(0.0);
+        positions.push(height / 2.0);
+        positions.push(0.0);
+        
+        normals.push(0.0);
+        normals.push(1.0);
+        normals.push(0.0);
+        
+        uvs.push(0.5);
+        uvs.push(0.5);
+        
+        // Cap vertices
+        for x in 0..=radial_segments {
+            let u = x as f32 / radial_segments as f32;
+            let theta = u * 2.0 * PI;
+            
+            let cos_theta = theta.cos();
+            let sin_theta = theta.sin();
+            
+            // Position
+            positions.push(radius_top * cos_theta);
+            positions.push(height / 2.0);
+            positions.push(radius_top * sin_theta);
+            
+            // Normal
+            normals.push(0.0);
+            normals.push(1.0);
+            normals.push(0.0);
+            
+            // UV
+            uvs.push(cos_theta * 0.5 + 0.5);
+            uvs.push(sin_theta * 0.5 + 0.5);
+        }
+        
+        // Top cap indices
+        let center_index = start_index as u16;
+        
+        for x in 0..radial_segments {
+            indices.push(center_index);
+            indices.push(center_index + (x + 1) as u16);
+            indices.push(center_index + (x + 2) as u16);
+        }
+        
+        // Bottom cap
+        let start_index = positions.len() / 3;
+        
+        // Center vertex
+        positions.push(0.0);
+        positions.push(-height / 2.0);
+        positions.push(0.0);
+        
+        normals.push(0.0);
+        normals.push(-1.0);
+        normals.push(0.0);
+        
+        uvs.push(0.5);
+        uvs.push(0.5);
+        
+        // Cap vertices
+        for x in 0..=radial_segments {
+            let u = x as f32 / radial_segments as f32;
+            let theta = u * 2.0 * PI;
+            
+            let cos_theta = theta.cos();
+            let sin_theta = theta.sin();
+            
+            // Position
+            positions.push(radius_bottom * cos_theta);
+            positions.push(-height / 2.0);
+            positions.push(radius_bottom * sin_theta);
+            
+            // Normal
+            normals.push(0.0);
+            normals.push(-1.0);
+            normals.push(0.0);
+            
+            // UV
+            uvs.push(cos_theta * 0.5 + 0.5);
+            uvs.push(sin_theta * 0.5 + 0.5);
+        }
+        
+        // Bottom cap indices
+        let center_index = start_index as u16;
+        
+        for x in 0..radial_segments {
+            indices.push(center_index);
+            indices.push(center_index + (x + 2) as u16);
+            indices.push(center_index + (x + 1) as u16);
         }
     }
+    
+    (positions, indices, normals, uvs)
 }
 
-/// Creates a cylinder mesh with the specified parameters
-///
-/// The cylinder is created with its central axis aligned with the Y axis.
-/// The cylinder includes proper normals and texture coordinates.
-///
-/// # Arguments
-///
-/// * `params` - Parameters controlling the dimensions and resolution of the cylinder
-///
+/// Generate a cone (special case of cylinder)
+/// 
+/// # Parameters
+/// * `radius` - Radius at the base of the cone
+/// * `height` - Height of the cone
+/// * `radial_segments` - Number of subdivisions around the circumference
+/// * `height_segments` - Number of subdivisions along the height
+/// * `open_ended` - Whether to include the base cap
+/// 
 /// # Returns
-///
-/// A mesh representing the cylinder
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::primitives::{create_cylinder, CylinderParams};
-///
-/// // Create a cylinder with default parameters
-/// let cylinder = create_cylinder(CylinderParams::default());
-///
-/// // Create a tall, thin cylinder with open ends (no caps)
-/// let tube = create_cylinder(CylinderParams {
-///     radius: 0.2,
-///     height: 2.0,
-///     radial_segments: 16,
-///     height_segments: 4,
-///     top_cap: false,
-///     bottom_cap: false,
-/// });
-/// ```
-pub fn create_cylinder(params: CylinderParams) -> Mesh {
-    let mut mesh = Mesh::new();
-    
-    let half_height = params.height / 2.0;
-    
-    // Create vertices for the main body
-    let mut body_vertices = Vec::with_capacity(
-        (params.height_segments + 1) as usize * params.radial_segments as usize
-    );
-    
-    for h in 0..=params.height_segments {
-        let y = -half_height + params.height * (h as f32 / params.height_segments as f32);
-        let v = h as f32 / params.height_segments as f32;
-        
-        for r in 0..params.radial_segments {
-            let theta = 2.0 * PI * r as f32 / params.radial_segments as f32;
-            let x = params.radius * theta.cos();
-            let z = params.radius * theta.sin();
-            
-            let normal = Vec3::new(x, 0.0, z).normalize();
-            let u = r as f32 / params.radial_segments as f32;
-            
-            let idx = mesh.add_vertex(Vertex::with_all(
-                Vec3::new(x, y, z),
-                normal,
-                Vec2::new(u, v),
-            ));
-            
-            body_vertices.push(idx);
-        }
-    }
-    
-    // Create triangles for the cylinder body
-    for h in 0..params.height_segments {
-        for r in 0..params.radial_segments {
-            let next_r = (r + 1) % params.radial_segments;
-            let idx1 = h * params.radial_segments + r;
-            let idx2 = h * params.radial_segments + next_r;
-            let idx3 = (h + 1) * params.radial_segments + next_r;
-            let idx4 = (h + 1) * params.radial_segments + r;
-            
-            let v1 = body_vertices[idx1 as usize];
-            let v2 = body_vertices[idx2 as usize];
-            let v3 = body_vertices[idx3 as usize];
-            let v4 = body_vertices[idx4 as usize];
-            
-            let _ = mesh.add_triangle(v1, v2, v3);
-            let _ = mesh.add_triangle(v1, v3, v4);
-        }
-    }
-    
-    // Create top cap if needed
-    if params.top_cap {
-        let center_idx = mesh.add_vertex(Vertex::with_all(
-            Vec3::new(0.0, half_height, 0.0),
-            Vec3::new(0.0, 1.0, 0.0),
-            Vec2::new(0.5, 0.5),
-        ));
-        
-        let mut cap_vertices = Vec::with_capacity(params.radial_segments as usize);
-        
-        for r in 0..params.radial_segments {
-            let theta = 2.0 * PI * r as f32 / params.radial_segments as f32;
-            let x = params.radius * theta.cos();
-            let z = params.radius * theta.sin();
-            
-            let u = 0.5 + 0.5 * theta.cos();
-            let v = 0.5 + 0.5 * theta.sin();
-            
-            let idx = mesh.add_vertex(Vertex::with_all(
-                Vec3::new(x, half_height, z),
-                Vec3::new(0.0, 1.0, 0.0),
-                Vec2::new(u, v),
-            ));
-            
-            cap_vertices.push(idx);
-        }
-        
-        for r in 0..params.radial_segments {
-            let next = (r + 1) % params.radial_segments;
-            let _ = mesh.add_triangle(center_idx, cap_vertices[r as usize], cap_vertices[next as usize]);
-        }
-    }
-    
-    // Create bottom cap if needed
-    if params.bottom_cap {
-        let center_idx = mesh.add_vertex(Vertex::with_all(
-            Vec3::new(0.0, -half_height, 0.0),
-            Vec3::new(0.0, -1.0, 0.0),
-            Vec2::new(0.5, 0.5),
-        ));
-        
-        let mut cap_vertices = Vec::with_capacity(params.radial_segments as usize);
-        
-        for r in 0..params.radial_segments {
-            let theta = 2.0 * PI * r as f32 / params.radial_segments as f32;
-            let x = params.radius * theta.cos();
-            let z = params.radius * theta.sin();
-            
-            let u = 0.5 + 0.5 * theta.cos();
-            let v = 0.5 + 0.5 * theta.sin();
-            
-            let idx = mesh.add_vertex(Vertex::with_all(
-                Vec3::new(x, -half_height, z),
-                Vec3::new(0.0, -1.0, 0.0),
-                Vec2::new(u, v),
-            ));
-            
-            cap_vertices.push(idx);
-        }
-        
-        for r in 0..params.radial_segments {
-            let next = (r + 1) % params.radial_segments;
-            let _ = mesh.add_triangle(center_idx, cap_vertices[next as usize], cap_vertices[r as usize]);
-        }
-    }
-    
-    mesh
+/// Tuple of (positions, indices, normals, uvs)
+pub fn generate_cone(
+    radius: f32,
+    height: f32,
+    radial_segments: usize,
+    height_segments: usize,
+    open_ended: bool,
+) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+    generate_cylinder(0.0, radius, height, radial_segments, height_segments, open_ended)
 }
 
-/// Parameters for torus creation
-///
-/// Defines the dimensions and resolution of a torus (donut) primitive.
-#[derive(Debug, Clone, Copy)]
-pub struct TorusParams {
-    /// Radius from the center of the torus to the center of the tube
-    pub radius: f32,
-    /// Radius of the tube
-    pub tube_radius: f32,
-    /// Number of segments around the circumference of the torus
-    pub radial_segments: u32,
-    /// Number of segments around the tube
-    pub tubular_segments: u32,
-}
-
-impl Default for TorusParams {
-    fn default() -> Self {
-        Self {
-            radius: 1.0,
-            tube_radius: 0.4,
-            radial_segments: 32,
-            tubular_segments: 24,
-        }
-    }
-}
-
-/// Creates a torus (donut shape) mesh with the specified parameters
-///
-/// The torus is created centered at the origin, with its central axis aligned
-/// with the Y axis. The torus includes proper normals and texture coordinates.
-///
-/// # Arguments
-///
-/// * `params` - Parameters controlling the dimensions and resolution of the torus
-///
+/// Generate a torus (donut shape)
+/// 
+/// # Parameters
+/// * `radius` - Distance from the center of the tube to the center of the torus
+/// * `tube` - Radius of the tube
+/// * `radial_segments` - Number of subdivisions around the main circle
+/// * `tubular_segments` - Number of subdivisions around the tube
+/// 
 /// # Returns
-///
-/// A mesh representing the torus
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::primitives::{create_torus, TorusParams};
-///
-/// // Create a torus with default parameters
-/// let torus = create_torus(TorusParams::default());
-///
-/// // Create a thin ring torus
-/// let thin_torus = create_torus(TorusParams {
-///     radius: 1.0,
-///     tube_radius: 0.1,
-///     radial_segments: 48,
-///     tubular_segments: 12,
-/// });
-/// ```
-pub fn create_torus(params: TorusParams) -> Mesh {
-    let mut mesh = Mesh::new();
+/// Tuple of (positions, indices, normals, uvs)
+pub fn generate_torus(
+    radius: f32,
+    tube: f32,
+    radial_segments: usize,
+    tubular_segments: usize,
+) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+    let radial_segments = radial_segments.max(2);
+    let tubular_segments = tubular_segments.max(3);
     
-    // Create vertices
-    let mut vertex_grid = Vec::with_capacity(
-        (params.radial_segments + 1) as usize * (params.tubular_segments + 1) as usize
-    );
+    let mut positions = Vec::new();
+    let mut normals = Vec::new();
+    let mut uvs = Vec::new();
+    let mut indices = Vec::new();
     
-    for radial in 0..=params.radial_segments {
-        let phi = 2.0 * PI * radial as f32 / params.radial_segments as f32;
-        
-        for tubular in 0..=params.tubular_segments {
-            let theta = 2.0 * PI * tubular as f32 / params.tubular_segments as f32;
+    // Generate vertices
+    for j in 0..=radial_segments {
+        for i in 0..=tubular_segments {
+            let u = i as f32 / tubular_segments as f32 * 2.0 * PI;
+            let v = j as f32 / radial_segments as f32 * 2.0 * PI;
             
-            // Calculate position
-            let x = (params.radius + params.tube_radius * theta.cos()) * phi.cos();
-            let y = params.tube_radius * theta.sin();
-            let z = (params.radius + params.tube_radius * theta.cos()) * phi.sin();
+            // Position
+            let x = (radius + tube * v.cos()) * u.cos();
+            let y = (radius + tube * v.cos()) * u.sin();
+            let z = tube * v.sin();
             
-            // Calculate normal
-            let nx = theta.cos() * phi.cos();
-            let ny = theta.sin();
-            let nz = theta.cos() * phi.sin();
+            positions.push(x);
+            positions.push(y);
+            positions.push(z);
             
-            // Calculate texture coordinates
-            let u = radial as f32 / params.radial_segments as f32;
-            let v = tubular as f32 / params.tubular_segments as f32;
+            // Normal
+            let center_x = radius * u.cos();
+            let center_y = radius * u.sin();
             
-            let idx = mesh.add_vertex(Vertex::with_all(
-                Vec3::new(x, y, z),
-                Vec3::new(nx, ny, nz).normalize(),
-                Vec2::new(u, v),
-            ));
+            let nx = x - center_x;
+            let ny = y - center_y;
+            let nz = z;
             
-            vertex_grid.push(idx);
+            // Normalize
+            let length = (nx * nx + ny * ny + nz * nz).sqrt();
+            normals.push(nx / length);
+            normals.push(ny / length);
+            normals.push(nz / length);
+            
+            // UV
+            uvs.push(i as f32 / tubular_segments as f32);
+            uvs.push(j as f32 / radial_segments as f32);
         }
     }
     
-    // Create triangles
-    for radial in 0..params.radial_segments {
-        for tubular in 0..params.tubular_segments {
-            let a = (params.tubular_segments + 1) * radial + tubular;
-            let b = (params.tubular_segments + 1) * (radial + 1) + tubular;
-            let c = (params.tubular_segments + 1) * (radial + 1) + tubular + 1;
-            let d = (params.tubular_segments + 1) * radial + tubular + 1;
+    // Generate indices
+    for j in 0..radial_segments {
+        for i in 0..tubular_segments {
+            let a = (j * (tubular_segments + 1) + i) as u16;
+            let b = (j * (tubular_segments + 1) + i + 1) as u16;
+            let c = ((j + 1) * (tubular_segments + 1) + i + 1) as u16;
+            let d = ((j + 1) * (tubular_segments + 1) + i) as u16;
             
-            let v1 = vertex_grid[a as usize];
-            let v2 = vertex_grid[b as usize];
-            let v3 = vertex_grid[c as usize];
-            let v4 = vertex_grid[d as usize];
+            // Two triangles per cell
+            indices.push(a);
+            indices.push(b);
+            indices.push(d);
             
-            let _ = mesh.add_triangle(v1, v2, v3);
-            let _ = mesh.add_triangle(v1, v3, v4);
+            indices.push(b);
+            indices.push(c);
+            indices.push(d);
         }
     }
     
-    mesh
+    (positions, indices, normals, uvs)
 }
 
-/// Parameters for icosphere (subdivision-based sphere) creation
-///
-/// Defines the size and detail level of an icosphere primitive.
-#[derive(Debug, Clone, Copy)]
-pub struct IcosphereParams {
-    /// Radius of the sphere
-    pub radius: f32,
-    /// Number of subdivision iterations to perform
-    pub subdivisions: u32,
-}
-
-impl Default for IcosphereParams {
-    fn default() -> Self {
-        Self {
-            radius: 0.5,
-            subdivisions: 2,
-        }
-    }
-}
-
-/// Creates an icosphere (a sphere based on an icosahedron with subdivisions)
-///
-/// This provides a more even distribution of vertices than a UV sphere.
-/// The icosphere starts with a regular icosahedron and then performs
-/// subdivision of the faces to create a more detailed and evenly distributed
-/// sphere.
-///
-/// # Arguments
-///
-/// * `params` - Parameters controlling the size and detail of the icosphere
-///
+/// Generate an icosahedron (20-sided polyhedron)
+/// 
+/// # Parameters
+/// * `radius` - Radius of the circumscribed sphere
+/// 
 /// # Returns
-///
-/// A mesh representing the icosphere
-///
-/// # Note
-///
-/// Each subdivision level increases the number of triangles by a factor of 4.
-/// - Level 0: 20 triangles
-/// - Level 1: 80 triangles
-/// - Level 2: 320 triangles
-/// - Level 3: 1,280 triangles
-/// - Level 4: 5,120 triangles
-/// - Level 5: 20,480 triangles
-///
-/// Be careful with high subdivision levels as they can generate very dense meshes.
-///
-/// # Examples
-///
-/// ```
-/// use mesh_tools::primitives::{create_icosphere, IcosphereParams};
-///
-/// // Create an icosphere with default parameters
-/// let icosphere = create_icosphere(IcosphereParams::default());
-///
-/// // Create a high-detail icosphere
-/// let detailed_icosphere = create_icosphere(IcosphereParams {
-///     radius: 1.0,
-///     subdivisions: 4,
-/// });
-/// ```
-pub fn create_icosphere(params: IcosphereParams) -> Mesh {
-    let mut mesh = Mesh::new();
-    
-    // Golden ratio constants used for icosahedron
+/// Tuple of (positions, indices, normals, uvs)
+pub fn generate_icosahedron(radius: f32) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+    // Constants for icosahedron construction
     let t = (1.0 + 5.0_f32.sqrt()) / 2.0;
     
-    // Create the 12 vertices of the icosahedron
+    let mut positions = Vec::new();
+    let mut normals = Vec::new();
+    let mut uvs = Vec::new();
+    let mut indices = Vec::new();
+    
+    // The 12 vertices of the icosahedron
     let vertices = [
-        Vec3::new(-1.0, t, 0.0),
-        Vec3::new(1.0, t, 0.0),
-        Vec3::new(-1.0, -t, 0.0),
-        Vec3::new(1.0, -t, 0.0),
+        [-1.0, t, 0.0],
+        [1.0, t, 0.0],
+        [-1.0, -t, 0.0],
+        [1.0, -t, 0.0],
         
-        Vec3::new(0.0, -1.0, t),
-        Vec3::new(0.0, 1.0, t),
-        Vec3::new(0.0, -1.0, -t),
-        Vec3::new(0.0, 1.0, -t),
+        [0.0, -1.0, t],
+        [0.0, 1.0, t],
+        [0.0, -1.0, -t],
+        [0.0, 1.0, -t],
         
-        Vec3::new(t, 0.0, -1.0),
-        Vec3::new(t, 0.0, 1.0),
-        Vec3::new(-t, 0.0, -1.0),
-        Vec3::new(-t, 0.0, 1.0),
+        [t, 0.0, -1.0],
+        [t, 0.0, 1.0],
+        [-t, 0.0, -1.0],
+        [-t, 0.0, 1.0],
     ];
     
-    // Normalize and add vertices to the mesh
-    let mut vertex_indices = Vec::with_capacity(12);
-    for pos in vertices.iter() {
-        let normalized = pos.normalize() * params.radius;
+    // Normalize and scale vertices
+    for vertex in &vertices {
+        let length = (vertex[0] * vertex[0] + vertex[1] * vertex[1] + vertex[2] * vertex[2]).sqrt();
+        let normalized = [
+            vertex[0] / length * radius,
+            vertex[1] / length * radius,
+            vertex[2] / length * radius,
+        ];
         
-        // Calculate UV coordinates based on spherical mapping
-        let phi = normalized.z.atan2(normalized.x);
-        let theta = normalized.y.acos();
-        let u = 1.0 - (phi / (2.0 * PI) + 0.5);
-        let v = theta / PI;
+        positions.push(normalized[0]);
+        positions.push(normalized[1]);
+        positions.push(normalized[2]);
         
-        let idx = mesh.add_vertex(Vertex::with_all(
-            normalized,
-            normalized.normalize(),
-            Vec2::new(u, v),
-        ));
+        // Normals (same as normalized positions)
+        normals.push(normalized[0] / radius);
+        normals.push(normalized[1] / radius);
+        normals.push(normalized[2] / radius);
         
-        vertex_indices.push(idx);
+        // Basic UV mapping (spherical projection)
+        let u = 0.5 + (normalized[0] / radius).atan2(normalized[2] / radius) / (2.0 * PI);
+        let v = 0.5 - (normalized[1] / radius).asin() / PI;
+        
+        uvs.push(u);
+        uvs.push(v);
     }
     
-    // Define the 20 triangular faces of the icosahedron
-    let faces = [
-        [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
-        [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
-        [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
-        [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1],
+    // The 20 triangles of the icosahedron
+    let triangle_indices = [
+        [0, 11, 5],
+        [0, 5, 1],
+        [0, 1, 7],
+        [0, 7, 10],
+        [0, 10, 11],
+        
+        [1, 5, 9],
+        [5, 11, 4],
+        [11, 10, 2],
+        [10, 7, 6],
+        [7, 1, 8],
+        
+        [3, 9, 4],
+        [3, 4, 2],
+        [3, 2, 6],
+        [3, 6, 8],
+        [3, 8, 9],
+        
+        [4, 9, 5],
+        [2, 4, 11],
+        [6, 2, 10],
+        [8, 6, 7],
+        [9, 8, 1],
     ];
     
-    // Add initial faces to the mesh
-    let mut triangles = Vec::new();
-    for &[a, b, c] in faces.iter() {
-        triangles.push([
-            vertex_indices[a], 
-            vertex_indices[b], 
-            vertex_indices[c]
-        ]);
+    // Add triangle indices
+    for tri in &triangle_indices {
+        indices.push(tri[0] as u16);
+        indices.push(tri[1] as u16);
+        indices.push(tri[2] as u16);
     }
     
-    // Helper function to find or add a midpoint vertex
-    let mut midpoint_cache = std::collections::HashMap::new();
-    let mut get_midpoint = |a: usize, b: usize, mesh: &mut Mesh| {
-        let key = if a < b { (a, b) } else { (b, a) };
-        
-        if let Some(&idx) = midpoint_cache.get(&key) {
-            return idx;
-        }
-        
-        let v1 = mesh.vertices[a].position;
-        let v2 = mesh.vertices[b].position;
-        
-        let midpoint = ((v1 + v2) * 0.5).normalize() * params.radius;
-        
-        // Calculate UV coordinates based on spherical mapping
-        let phi = midpoint.z.atan2(midpoint.x);
-        let theta = midpoint.y.acos();
-        let u = 1.0 - (phi / (2.0 * PI) + 0.5);
-        let v = theta / PI;
-        
-        let idx = mesh.add_vertex(Vertex::with_all(
-            midpoint,
-            midpoint.normalize(),
-            Vec2::new(u, v),
-        ));
-        
-        midpoint_cache.insert(key, idx);
-        idx
-    };
-    
-    // Perform subdivisions
-    for _ in 0..params.subdivisions {
-        let mut new_triangles = Vec::new();
-        
-        for &[a, b, c] in triangles.iter() {
-            // Get midpoints
-            let ab = get_midpoint(a, b, &mut mesh);
-            let bc = get_midpoint(b, c, &mut mesh);
-            let ca = get_midpoint(c, a, &mut mesh);
-            
-            // Create four triangles from the original
-            new_triangles.push([a, ab, ca]);
-            new_triangles.push([b, bc, ab]);
-            new_triangles.push([c, ca, bc]);
-            new_triangles.push([ab, bc, ca]);
-        }
-        
-        triangles = new_triangles;
-    }
-    
-    // Add all triangles to the mesh
-    for [a, b, c] in triangles {
-        let _ = mesh.add_triangle(a, b, c);
-    }
-    
-    mesh
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::Mesh;
-
-    #[test]
-    fn test_create_cube() {
-        let cube = create_cube(2.0, 2.0, 2.0);
-        
-        // A cube should have 24 vertices (4 per face * 6 faces)
-        assert_eq!(cube.vertices.len(), 24);
-        
-        // A cube should have 12 triangles (2 per face * 6 faces)
-        assert_eq!(cube.triangles.len(), 12);
-        
-        // Check that normals and UVs are present
-        assert!(cube.has_normals());
-        assert!(cube.has_uvs());
-    }
-
-    #[test]
-    fn test_create_plane() {
-        let plane = create_plane(4.0, 4.0, 2, 2);
-        
-        // A 2x2 segmented plane should have 9 vertices (3x3 grid)
-        assert_eq!(plane.vertices.len(), 9);
-        
-        // A 2x2 segmented plane should have 8 triangles (2 per grid cell * 4 cells)
-        assert_eq!(plane.triangles.len(), 8);
-        
-        // Check that normals and UVs are present
-        assert!(plane.has_normals());
-        assert!(plane.has_uvs());
-    }
-
-    #[test]
-    fn test_create_sphere() {
-        let sphere = create_sphere(1.0, 8, 4);
-        
-        // Verify the number of vertices: 2 poles + (rings-1)*segments = 2 + 3*8 = 26
-        assert_eq!(sphere.vertices.len(), 26);
-        
-        // Verify the number of triangles: 2*segments + (rings-2)*2*segments = 2*8 + 2*2*8 = 48
-        assert_eq!(sphere.triangles.len(), 48);
-        
-        // Check that normals and UVs are present
-        assert!(sphere.has_normals());
-        assert!(sphere.has_uvs());
-    }
-
-    #[test]
-    fn test_create_cone() {
-        let params = ConeParams {
-            radius: 1.0,
-            height: 2.0,
-            segments: 8,
-            cap: true,
-        };
-        
-        let cone = create_cone(params);
-        
-        // Verify the number of vertices: 1 tip + 1 center + segments = 10
-        assert_eq!(cone.vertices.len(), 10);
-        
-        // Verify the number of triangles: segments (for the sides) + segments (for the cap) = 16
-        assert_eq!(cone.triangles.len(), 16);
-        
-        // Check that normals and UVs are present
-        assert!(cone.has_normals());
-        assert!(cone.has_uvs());
-    }
-
-    #[test]
-    fn test_create_cylinder() {
-        let params = CylinderParams {
-            radius: 1.0,
-            height: 2.0,
-            radial_segments: 8,
-            height_segments: 1,
-            top_cap: true,
-            bottom_cap: true,
-        };
-        
-        let cylinder = create_cylinder(params);
-        
-        // Verify the number of vertices: 
-        // Body: radial_segments * (height_segments+1) = 8 * 2 = 16
-        // Top cap: 1 center + radial_segments = 9
-        // Bottom cap: 1 center + radial_segments = 9
-        // Total: 16 + 9 + 9 = 34
-        assert_eq!(cylinder.vertices.len(), 34);
-        
-        // Verify the number of triangles:
-        // Body: radial_segments * height_segments * 2 = 8 * 1 * 2 = 16
-        // Top cap: radial_segments = 8
-        // Bottom cap: radial_segments = 8
-        // Total: 16 + 8 + 8 = 32
-        assert_eq!(cylinder.triangles.len(), 32);
-        
-        // Check that normals and UVs are present
-        assert!(cylinder.has_normals());
-        assert!(cylinder.has_uvs());
-    }
-
-    #[test]
-    fn test_create_torus() {
-        let params = TorusParams {
-            radius: 1.0,
-            tube_radius: 0.4,
-            radial_segments: 8,
-            tubular_segments: 6,
-        };
-        
-        let torus = create_torus(params);
-        
-        // Verify the number of vertices: (radial_segments+1) * (tubular_segments+1) = 9 * 7 = 63
-        assert_eq!(torus.vertices.len(), 63);
-        
-        // Verify the number of triangles: radial_segments * tubular_segments * 2 = 8 * 6 * 2 = 96
-        assert_eq!(torus.triangles.len(), 96);
-        
-        // Check that normals and UVs are present
-        assert!(torus.has_normals());
-        assert!(torus.has_uvs());
-    }
-
-    #[test]
-    fn test_create_icosphere() {
-        let params = IcosphereParams {
-            radius: 1.0,
-            subdivisions: 1, // Just one subdivision for the test
-        };
-        
-        let icosphere = create_icosphere(params);
-        
-        // After 1 subdivision, each face is divided into 4, and each edge creates 1 new vertex
-        // Initial icosahedron: 12 vertices, 20 faces, 30 edges
-        // After subdivision: 12 + 30 = 42 vertices, 20 * 4 = 80 faces
-        assert_eq!(icosphere.vertices.len(), 42);
-        assert_eq!(icosphere.triangles.len(), 80);
-        
-        // Check that normals and UVs are present
-        assert!(icosphere.has_normals());
-        assert!(icosphere.has_uvs());
-    }
+    (positions, indices, normals, uvs)
 }
