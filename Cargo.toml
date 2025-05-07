@@ -10,6 +10,7 @@ homepage = "https://github.com/michaelblazej/mesh-tools"
 documentation = "https://github.com/michaelblazej/mesh-tools#readme"
 keywords = ["gltf", "3d", "mesh", "export", "graphics"]
 categories = ["graphics", "rendering", "game-development", "simulation"]
+include = ["src/**/*.rs", "Cargo.toml", "LICENSE"]
 
 [dependencies]
 # For serializing/deserializing JSON
