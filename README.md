@@ -1,15 +1,31 @@
-# glTF Exporter for Rust
+# mesh-tools
 
-A Rust library for exporting 3D models to the glTF 2.0 format (GLB binary variant), inspired by the Blender glTF exporter.
+A Rust library for creating, manipulating, and exporting 3D meshes with support for the glTF 2.0 format (including binary GLB).
 
 ## Features
 
-- Core glTF 2.0 data structures implemented in Rust
-- Export meshes to binary GLB format
-- Create simple primitives (currently supports box geometry)
-- Proper handling of geometry data (vertices, indices, normals)
+- Core mesh data structures for working with 3D geometry
+- Primitive shape generators (box, plane, sphere, cylinder, cone, torus, icosahedron)
+- Material creation with PBR properties (base color, metallic, roughness, emissive)
+- Scene hierarchy and node transformation support
+- Export to binary GLB format with Blender compatibility
+- Comprehensive vertex attribute handling (positions, normals, UVs, tangents, colors)
+
+## Primitive Shapes
+
+The library provides generators for these common 3D shapes:
+
+- Box/Cube with configurable dimensions
+- Plane with width and depth segments
+- Sphere with configurable radius and segments
+- Cylinder with top/bottom radii, height, and segment options
+- Cone (special case of cylinder with zero top radius)
+- Torus with main radius and tube radius settings
+- Icosahedron (20-sided polyhedron)
 
 ## Usage
+
+### Creating a Simple Box
 
 ```rust
 use gltf_export::GltfBuilder;
@@ -45,6 +61,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+### Working with Materials
+
+The library supports creating basic and PBR metallic materials:
+
+```rust
+// Create a basic colored material
+let red_material = builder.create_basic_material(
+    Some("Red Material".to_string()),
+    [1.0, 0.0, 0.0, 1.0], // Red color
+);
+
+// Create a metallic material (e.g., gold)
+let gold_material = builder.create_metallic_material(
+    Some("Gold Material".to_string()),
+    [1.0, 0.84, 0.0, 1.0],  // Gold color
+    0.9, // High metallic factor
+    0.1, // Low roughness factor (shiny)
+);
+
+// Apply material to a mesh
+let sphere_mesh = builder.create_sphere(
+    1.0,  // radius
+    32,   // width segments
+    16,   // height segments
+    Some(gold_material)
+);
+```
+
+## Mesh Export
+
+The library provides GLB (binary glTF) export functionality that is compatible with Blender and other 3D software:
+
+- Proper handling of chunk types and alignment
+- Binary data padding and structure according to glTF spec
+- Support for all vertex attributes (positions, normals, UVs, etc.)
+
 ## Building and Running
 
 To build the library:
@@ -53,29 +105,22 @@ To build the library:
 cargo build
 ```
 
-To run the example that creates a box:
+To run one of the examples:
 
 ```bash
-cargo run
+cargo run --example primitives_demo
 ```
 
-This will create a `box.glb` file in the current directory, which can be loaded in any glTF viewer or 3D application that supports the glTF format.
+## Examples
 
-## Dependencies
+The library includes several examples demonstrating different features:
 
-- `serde` and `serde_json` - For JSON serialization
-- `byteorder` - For binary data handling
-- `base64` - For encoding binary data
-- `thiserror` - For error handling
-- `nalgebra` - For math operations (matrix/vector)
-
-## Future Improvements
-
-- Support for materials and textures
-- Support for animations
-- Support for more complex geometries
-- Support for custom properties and extensions
-- Importing glTF files into Rust objects
+- `simple_box.rs`: Basic box creation and export
+- `primitives_demo.rs`: All supported primitive shapes with different materials
+- `materials_demo.rs`: Various material types and properties
+- `texture_demo.rs`: Texture mapping and image handling
+- `custom_mesh_demo.rs`: Creating custom meshes from vertex data
+- `hierarchy_demo.rs`: Building scene hierarchies with multiple nodes
 
 ## License
 
