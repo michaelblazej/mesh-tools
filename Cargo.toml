@@ -44,3 +44,11 @@ path = "examples/custom_mesh_demo.rs"
 [[example]]
 name = "primitives_demo"
 path = "examples/primitives_demo.rs"
+
+[[example]]
+name = "instancing_demo"
+path = "examples/instancing_demo.rs"
+
+[[example]]
+name = "terrain_demo"
+path = "examples/terrain_demo.rs"
