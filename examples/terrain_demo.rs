@@ -1,4 +1,5 @@
-use mesh_tools::GltfBuilder;
+use mesh_tools::{GltfBuilder, Triangle};
+use nalgebra::{Point3, Vector2, Vector3};
 use std::error::Error;
 use std::f32::consts::PI;
 
@@ -91,10 +92,10 @@ fn generate_terrain_mesh(
     // Generate height map
     let height_map = generate_height_map(grid_width, grid_depth, height_scale);
     
-    // Calculate vertices, normals, and indices
+    // Calculate vertices, normals, and indices using nalgebra types
     let mut positions = Vec::new();
     let mut normals = Vec::new();
-    let mut indices = Vec::new();
+    let mut raw_indices = Vec::new(); // We'll convert these to Triangle structs later
     let mut texcoords = Vec::new();
     
     // Create vertices and texture coordinates
@@ -107,18 +108,17 @@ fn generate_terrain_mesh(
             let z_pos = v * width - width / 2.0;
             let y_pos = height_map[z * grid_width + x];
             
-            // Add position
-            positions.push(x_pos);
-            positions.push(y_pos);
-            positions.push(z_pos);
+            // Add position using Point3
+            positions.push(Point3::new(x_pos, y_pos, z_pos));
             
-            // Add UV coordinates
-            texcoords.push(u);
-            texcoords.push(v);
+            // Add UV coordinates using Vector2
+            texcoords.push(Vector2::new(u, v));
         }
     }
     
     // Create indices for triangles
+    let mut indices = Vec::new(); // This will hold our Triangle structs
+    
     for z in 0..depth_segments {
         for x in 0..width_segments {
             let tl = z * grid_width + x;
@@ -126,20 +126,33 @@ fn generate_terrain_mesh(
             let bl = (z + 1) * grid_width + x;
             let br = bl + 1;
             
-            // First triangle
-            indices.push(tl as u16);
-            indices.push(bl as u16);
-            indices.push(tr as u16);
+            // First triangle as Triangle struct
+            indices.push(Triangle {
+                a: tl as u16,
+                b: bl as u16,
+                c: tr as u16
+            });
             
-            // Second triangle
-            indices.push(tr as u16);
-            indices.push(bl as u16);
-            indices.push(br as u16);
+            // Second triangle as Triangle struct
+            indices.push(Triangle {
+                a: tr as u16,
+                b: bl as u16,
+                c: br as u16
+            });
+            
+            // Also keep raw indices for the normals calculation and material sorting
+            raw_indices.push(tl as u16);
+            raw_indices.push(bl as u16);
+            raw_indices.push(tr as u16);
+            
+            raw_indices.push(tr as u16);
+            raw_indices.push(bl as u16);
+            raw_indices.push(br as u16);
         }
     }
     
-    // Calculate normals
-    normals = calculate_normals(&positions, &indices);
+    // Calculate normals using the nalgebra types
+    normals = calculate_normals(&positions, &raw_indices);
     
     // Create separate meshes based on height and slope for different materials
     let water_threshold = 0.0;
@@ -148,114 +161,126 @@ fn generate_terrain_mesh(
     let mountain_threshold = 5.0;
     
     // Arrays to store indices for different material regions
-    let mut water_indices = Vec::new();
-    let mut sand_indices = Vec::new();
-    let mut grass_indices = Vec::new();
-    let mut mountain_indices = Vec::new();
-    let mut snow_indices = Vec::new();
+    let mut water_triangles = Vec::new();
+    let mut sand_triangles = Vec::new();
+    let mut grass_triangles = Vec::new();
+    let mut mountain_triangles = Vec::new();
+    let mut snow_triangles = Vec::new();
     
     // Assign triangles to appropriate materials based on height
-    for i in (0..indices.len()).step_by(3) {
-        let idx1 = indices[i] as usize;
-        let idx2 = indices[i + 1] as usize;
-        let idx3 = indices[i + 2] as usize;
+    for (i, triangle) in raw_indices.chunks_exact(3).enumerate() {
+        let idx1 = triangle[0] as usize;
+        let idx2 = triangle[1] as usize;
+        let idx3 = triangle[2] as usize;
         
-        let y1 = positions[idx1 * 3 + 1];
-        let y2 = positions[idx2 * 3 + 1];
-        let y3 = positions[idx3 * 3 + 1];
+        let y1 = positions[idx1].y;
+        let y2 = positions[idx2].y;
+        let y3 = positions[idx3].y;
         
         // Calculate average height of the triangle
         let avg_height = (y1 + y2 + y3) / 3.0;
         
         // Calculate the slope of the triangle
         let normal_idx = idx1; // Use normal of first vertex
-        let normal_y = normals[normal_idx * 3 + 1];
+        let normal_y = normals[normal_idx].y;
         let slope = 1.0 - normal_y; // 0 for flat, 1 for vertical
+        
+        // Create a Triangle struct from the indices
+        let triangle = Triangle {
+            a: triangle[0],
+            b: triangle[1],
+            c: triangle[2],
+        };
         
         // Categorize triangle based on height and slope
         if avg_height < water_threshold {
-            water_indices.push(indices[i]);
-            water_indices.push(indices[i + 1]);
-            water_indices.push(indices[i + 2]);
+            water_triangles.push(triangle);
         } else if avg_height < sand_threshold {
-            sand_indices.push(indices[i]);
-            sand_indices.push(indices[i + 1]);
-            sand_indices.push(indices[i + 2]);
+            sand_triangles.push(triangle);
         } else if avg_height < grass_threshold || slope < 0.3 {
-            grass_indices.push(indices[i]);
-            grass_indices.push(indices[i + 1]);
-            grass_indices.push(indices[i + 2]);
+            grass_triangles.push(triangle);
         } else if avg_height < mountain_threshold {
-            mountain_indices.push(indices[i]);
-            mountain_indices.push(indices[i + 1]);
-            mountain_indices.push(indices[i + 2]);
+            mountain_triangles.push(triangle);
         } else {
-            snow_indices.push(indices[i]);
-            snow_indices.push(indices[i + 1]);
-            snow_indices.push(indices[i + 2]);
+            snow_triangles.push(triangle);
         }
     }
     
-    // Create separate meshes for each terrain type
-    let water_mesh = if !water_indices.is_empty() {
+    // Create separate meshes for each terrain type using nalgebra types
+    let water_mesh = if !water_triangles.is_empty() {
+        // Convert the Vector2 texcoords to a Vec<Vec<Vector2>> for multiple UV sets
+        let texcoord_sets = Some(vec![texcoords.clone()]);
+        
         Some(builder.create_custom_mesh(
             Some("Water".to_string()),
             &positions,
-            &water_indices.iter().map(|&i| i).collect::<Vec<u16>>(),
-            Some(&normals),
-            Some(vec![texcoords.clone()]),
+            &water_triangles,
+            Some(normals.clone()),
+            texcoord_sets,
             Some(water_material),
         ))
     } else {
         None
     };
     
-    let sand_mesh = if !sand_indices.is_empty() {
+    let sand_mesh = if !sand_triangles.is_empty() {
+        // Convert the Vector2 texcoords to a Vec<Vec<Vector2>> for multiple UV sets
+        let texcoord_sets = Some(vec![texcoords.clone()]);
+        
         Some(builder.create_custom_mesh(
             Some("Sand".to_string()),
             &positions,
-            &sand_indices.iter().map(|&i| i).collect::<Vec<u16>>(),
-            Some(&normals),
-            Some(vec![texcoords.clone()]),
+            &sand_triangles,
+            Some(normals.clone()),
+            texcoord_sets,
             Some(sand_material),
         ))
     } else {
         None
     };
     
-    let grass_mesh = if !grass_indices.is_empty() {
+    let grass_mesh = if !grass_triangles.is_empty() {
+        // Convert the Vector2 texcoords to a Vec<Vec<Vector2>> for multiple UV sets
+        let texcoord_sets = Some(vec![texcoords.clone()]);
+        
         Some(builder.create_custom_mesh(
             Some("Grass".to_string()),
             &positions,
-            &grass_indices.iter().map(|&i| i).collect::<Vec<u16>>(),
-            Some(&normals),
-            Some(vec![texcoords.clone()]),
+            &grass_triangles,
+            Some(normals.clone()),
+            texcoord_sets,
             Some(grass_material),
         ))
     } else {
         None
     };
     
-    let mountain_mesh = if !mountain_indices.is_empty() {
+    let mountain_mesh = if !mountain_triangles.is_empty() {
+        // Convert the Vector2 texcoords to a Vec<Vec<Vector2>> for multiple UV sets
+        let texcoord_sets = Some(vec![texcoords.clone()]);
+        
         Some(builder.create_custom_mesh(
             Some("Mountain".to_string()),
             &positions,
-            &mountain_indices.iter().map(|&i| i).collect::<Vec<u16>>(),
-            Some(&normals),
-            Some(vec![texcoords.clone()]),
+            &mountain_triangles,
+            Some(normals.clone()),
+            texcoord_sets,
             Some(mountain_material),
         ))
     } else {
         None
     };
     
-    let snow_mesh = if !snow_indices.is_empty() {
+    let snow_mesh = if !snow_triangles.is_empty() {
+        // Convert the Vector2 texcoords to a Vec<Vec<Vector2>> for multiple UV sets
+        let texcoord_sets = Some(vec![texcoords.clone()]);
+        
         Some(builder.create_custom_mesh(
             Some("Snow".to_string()),
             &positions,
-            &snow_indices.iter().map(|&i| i).collect::<Vec<u16>>(),
-            Some(&normals),
-            Some(vec![texcoords.clone()]),
+            &snow_triangles,
+            Some(normals.clone()),
+            texcoord_sets,
             Some(snow_material),
         ))
     } else {
@@ -403,10 +428,10 @@ fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
-/// Calculate vertex normals based on triangle faces
-fn calculate_normals(positions: &[f32], indices: &[u16]) -> Vec<f32> {
-    let vertex_count = positions.len() / 3;
-    let mut normals = vec![0.0; positions.len()];
+/// Calculate vertex normals based on triangle faces using nalgebra types
+fn calculate_normals(positions: &[Point3<f32>], indices: &[u16]) -> Vec<Vector3<f32>> {
+    let vertex_count = positions.len();
+    let mut normals = vec![Vector3::new(0.0, 0.0, 0.0); vertex_count];
     
     // For each triangle
     for i in (0..indices.len()).step_by(3) {
@@ -415,59 +440,27 @@ fn calculate_normals(positions: &[f32], indices: &[u16]) -> Vec<f32> {
         let i3 = indices[i + 2] as usize;
         
         // Get vertices of this triangle
-        let v1x = positions[i1 * 3];
-        let v1y = positions[i1 * 3 + 1];
-        let v1z = positions[i1 * 3 + 2];
-        
-        let v2x = positions[i2 * 3];
-        let v2y = positions[i2 * 3 + 1];
-        let v2z = positions[i2 * 3 + 2];
-        
-        let v3x = positions[i3 * 3];
-        let v3y = positions[i3 * 3 + 1];
-        let v3z = positions[i3 * 3 + 2];
+        let v1 = positions[i1];
+        let v2 = positions[i2];
+        let v3 = positions[i3];
         
         // Calculate vectors along two edges of the triangle
-        let edge1x = v2x - v1x;
-        let edge1y = v2y - v1y;
-        let edge1z = v2z - v1z;
-        
-        let edge2x = v3x - v1x;
-        let edge2y = v3y - v1y;
-        let edge2z = v3z - v1z;
+        let edge1 = Vector3::new(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
+        let edge2 = Vector3::new(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
         
         // Calculate cross product to get face normal
-        let nx = edge1y * edge2z - edge1z * edge2y;
-        let ny = edge1z * edge2x - edge1x * edge2z;
-        let nz = edge1x * edge2y - edge1y * edge2x;
+        let normal = edge1.cross(&edge2);
         
         // Accumulate the normal on each vertex of the triangle
-        normals[i1 * 3] += nx;
-        normals[i1 * 3 + 1] += ny;
-        normals[i1 * 3 + 2] += nz;
-        
-        normals[i2 * 3] += nx;
-        normals[i2 * 3 + 1] += ny;
-        normals[i2 * 3 + 2] += nz;
-        
-        normals[i3 * 3] += nx;
-        normals[i3 * 3 + 1] += ny;
-        normals[i3 * 3 + 2] += nz;
+        normals[i1] += normal;
+        normals[i2] += normal;
+        normals[i3] += normal;
     }
     
     // Normalize all vertex normals
-    for i in 0..vertex_count {
-        let idx = i * 3;
-        let nx = normals[idx];
-        let ny = normals[idx + 1];
-        let nz = normals[idx + 2];
-        
-        let length = (nx * nx + ny * ny + nz * nz).sqrt();
-        
-        if length > 0.0 {
-            normals[idx] = nx / length;
-            normals[idx + 1] = ny / length;
-            normals[idx + 2] = nz / length;
+    for normal in normals.iter_mut() {
+        if normal.magnitude() > 0.0 {
+            normal.normalize_mut();
         }
     }
     

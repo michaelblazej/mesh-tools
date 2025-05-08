@@ -62,6 +62,7 @@ mod builder_material;    // Implementations for material handling
 pub use error::{GltfError, Result};
 pub use models::*;
 pub use builder::GltfBuilder;
+pub use builder_primitives::Triangle;
 
 // Constants re-exports
 pub use constants::accessor_type;

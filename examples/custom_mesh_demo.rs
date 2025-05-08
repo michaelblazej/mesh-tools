@@ -1,4 +1,6 @@
 use mesh_tools::GltfBuilder;
+use mesh_tools::Triangle;
+use nalgebra::{Point3, Vector2, Vector3};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -25,81 +27,81 @@ fn main() -> Result<(), Box<dyn Error>> {
         checker_texture
     );
     
-    // Define a simple triangle mesh with custom UV mapping
-    let positions = [
+    // Define a simple triangle mesh with custom UV mapping using nalgebra types
+    let positions = vec![
         // Position data for 3 vertices (triangle)
-        -1.0, -1.0, 0.0,  // Vertex 0: bottom-left
-         1.0, -1.0, 0.0,  // Vertex 1: bottom-right
-         0.0,  1.0, 0.0,  // Vertex 2: top-center
+        Point3::new(-1.0, -1.0, 0.0),  // Vertex 0: bottom-left
+        Point3::new( 1.0, -1.0, 0.0),  // Vertex 1: bottom-right
+        Point3::new( 0.0,  1.0, 0.0),  // Vertex 2: top-center
     ];
     
-    let indices = [
-        0, 1, 2  // Single triangle
+    let indices = vec![
+        Triangle { a: 0, b: 1, c: 2 }  // Single triangle
     ];
     
-    let normals = [
+    let normals = vec![
         // Normal data for 3 vertices (all facing forward)
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(0.0, 0.0, 1.0),
     ];
     
-    let texcoords = [
+    let texcoords = vec![
         // UV data for 3 vertices
-        0.0, 1.0,  // Vertex 0: bottom-left
-        1.0, 1.0,  // Vertex 1: bottom-right
-        0.5, 0.0,  // Vertex 2: top-center
+        Vector2::new(0.0, 1.0),  // Vertex 0: bottom-left
+        Vector2::new(1.0, 1.0),  // Vertex 1: bottom-right
+        Vector2::new(0.5, 0.0),  // Vertex 2: top-center
     ];
     
-    // Create the custom triangle mesh using create_simple_mesh (single UV channel)
-    let triangle_mesh = builder.create_simple_mesh(
+    // Create the custom triangle mesh using create_simple_mesh_3d (single UV channel with nalgebra types)
+    let triangle_mesh = builder.create_simple_mesh_3d(
         Some("Triangle".to_string()),
         &positions,
         &indices,
-        Some(&normals),
-        Some(&texcoords),
+        Some(normals),
+        Some(texcoords),
         Some(checker_material)
     );
     
-    // Define a quad mesh with multiple UV channels
-    let quad_positions = [
+    // Define a quad mesh with multiple UV channels using nalgebra types
+    let quad_positions = vec![
         // Position data for 4 vertices (quad)
-        -1.0, -1.0, 0.0,  // Vertex 0: bottom-left
-         1.0, -1.0, 0.0,  // Vertex 1: bottom-right
-         1.0,  1.0, 0.0,  // Vertex 2: top-right
-        -1.0,  1.0, 0.0,  // Vertex 3: top-left
+        Point3::new(-1.0, -1.0, 0.0),  // Vertex 0: bottom-left
+        Point3::new( 1.0, -1.0, 0.0),  // Vertex 1: bottom-right
+        Point3::new( 1.0,  1.0, 0.0),  // Vertex 2: top-right
+        Point3::new(-1.0,  1.0, 0.0),  // Vertex 3: top-left
     ];
     
-    let quad_indices = [
+    let quad_indices = vec![
         // Two triangles forming a quad
-        0, 1, 2,  // Triangle 1
-        0, 2, 3   // Triangle 2
+        Triangle { a: 0, b: 1, c: 2 },  // Triangle 1
+        Triangle { a: 0, b: 2, c: 3 }   // Triangle 2
     ];
     
-    let quad_normals = [
+    let quad_normals = vec![
         // Normal data for 4 vertices (all facing forward)
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(0.0, 0.0, 1.0),
     ];
     
     // Primary UV channel (TEXCOORD_0) - standard mapping
     let quad_texcoords_0 = vec![
         // Standard UV mapping (full texture)
-        0.0, 1.0,  // Vertex 0: bottom-left
-        1.0, 1.0,  // Vertex 1: bottom-right
-        1.0, 0.0,  // Vertex 2: top-right
-        0.0, 0.0,  // Vertex 3: top-left
+        Vector2::new(0.0, 1.0),  // Vertex 0: bottom-left
+        Vector2::new(1.0, 1.0),  // Vertex 1: bottom-right
+        Vector2::new(1.0, 0.0),  // Vertex 2: top-right
+        Vector2::new(0.0, 0.0),  // Vertex 3: top-left
     ];
     
     // Secondary UV channel (TEXCOORD_1) - tiled mapping
     let quad_texcoords_1 = vec![
         // Tiled UV mapping (repeated texture)
-        0.0, 2.0,  // Vertex 0: bottom-left
-        2.0, 2.0,  // Vertex 1: bottom-right
-        2.0, 0.0,  // Vertex 2: top-right
-        0.0, 0.0,  // Vertex 3: top-left
+        Vector2::new(0.0, 2.0),  // Vertex 0: bottom-left
+        Vector2::new(2.0, 2.0),  // Vertex 1: bottom-right
+        Vector2::new(2.0, 0.0),  // Vertex 2: top-right
+        Vector2::new(0.0, 0.0),  // Vertex 3: top-left
     ];
     
     // Create a textured material that uses the second UV set
@@ -115,7 +117,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         uv_test_texture
     );
     
-    // Pack multiple UV sets into a vector
+    // Pack multiple UV sets into a vector of Vector2 vectors
     let texcoord_sets = Some(vec![quad_texcoords_0, quad_texcoords_1]);
     
     // Create the custom quad mesh using create_custom_mesh (multiple UV channels)
@@ -123,88 +125,122 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some("Quad".to_string()),
         &quad_positions,
         &quad_indices,
-        Some(&quad_normals),
+        Some(quad_normals),
         texcoord_sets,
         Some(uv_test_material)
     );
     
-    // Create a cube with fully custom UV mapping for each face
-    let cube_positions = [
+    // Create a cube with fully custom UV mapping for each face using nalgebra types
+    let cube_positions = vec![
         // Front face - 4 vertices
-        -1.0, -1.0,  1.0,  // 0: bottom-left
-         1.0, -1.0,  1.0,  // 1: bottom-right
-         1.0,  1.0,  1.0,  // 2: top-right
-        -1.0,  1.0,  1.0,  // 3: top-left
+        Point3::new(-1.0, -1.0,  1.0),  // 0: bottom-left
+        Point3::new( 1.0, -1.0,  1.0),  // 1: bottom-right
+        Point3::new( 1.0,  1.0,  1.0),  // 2: top-right
+        Point3::new(-1.0,  1.0,  1.0),  // 3: top-left
         
         // Back face - 4 vertices
-        -1.0, -1.0, -1.0,  // 4: bottom-left
-         1.0, -1.0, -1.0,  // 5: bottom-right
-         1.0,  1.0, -1.0,  // 6: top-right
-        -1.0,  1.0, -1.0,  // 7: top-left
+        Point3::new( 1.0, -1.0, -1.0),  // 4: bottom-left
+        Point3::new(-1.0, -1.0, -1.0),  // 5: bottom-right
+        Point3::new(-1.0,  1.0, -1.0),  // 6: top-right
+        Point3::new( 1.0,  1.0, -1.0),  // 7: top-left
         
         // Top face - 4 vertices
-        -1.0,  1.0, -1.0,  // 8: back-left
-         1.0,  1.0, -1.0,  // 9: back-right
-         1.0,  1.0,  1.0,  // 10: front-right
-        -1.0,  1.0,  1.0,  // 11: front-left
+        Point3::new(-1.0,  1.0,  1.0),  // 8: back-left
+        Point3::new( 1.0,  1.0,  1.0),  // 9: back-right
+        Point3::new( 1.0,  1.0, -1.0),  // 10: front-right
+        Point3::new(-1.0,  1.0, -1.0),  // 11: front-left
         
         // Bottom face - 4 vertices
-        -1.0, -1.0, -1.0,  // 12: back-left
-         1.0, -1.0, -1.0,  // 13: back-right
-         1.0, -1.0,  1.0,  // 14: front-right
-        -1.0, -1.0,  1.0,  // 15: front-left
+        Point3::new( 1.0, -1.0,  1.0),  // 12: back-left
+        Point3::new(-1.0, -1.0,  1.0),  // 13: back-right
+        Point3::new(-1.0, -1.0, -1.0),  // 14: front-right
+        Point3::new( 1.0, -1.0, -1.0),  // 15: front-left
         
         // Right face - 4 vertices
-         1.0, -1.0, -1.0,  // 16: bottom-back
-         1.0,  1.0, -1.0,  // 17: top-back
-         1.0,  1.0,  1.0,  // 18: top-front
-         1.0, -1.0,  1.0,  // 19: bottom-front
+        Point3::new( 1.0, -1.0,  1.0),  // 16: bottom-front
+        Point3::new( 1.0, -1.0, -1.0),  // 17: bottom-back
+        Point3::new( 1.0,  1.0, -1.0),  // 18: top-back
+        Point3::new( 1.0,  1.0,  1.0),  // 19: top-front
         
         // Left face - 4 vertices
-        -1.0, -1.0, -1.0,  // 20: bottom-back
-        -1.0, -1.0,  1.0,  // 21: bottom-front
-        -1.0,  1.0,  1.0,  // 22: top-front
-        -1.0,  1.0, -1.0,  // 23: top-back
+        Point3::new(-1.0, -1.0, -1.0),  // 20: bottom-back
+        Point3::new(-1.0, -1.0,  1.0),  // 21: bottom-front
+        Point3::new(-1.0,  1.0,  1.0),  // 22: top-front
+        Point3::new(-1.0,  1.0, -1.0),  // 23: top-back
     ];
     
-    let cube_indices = [
+    let cube_indices = vec![
         // Front face
-        0, 1, 2, 0, 2, 3,
+        Triangle { a: 0, b: 1, c: 2 }, 
+        Triangle { a: 0, b: 2, c: 3 },
+
         // Back face
-        4, 7, 6, 4, 6, 5,
+        Triangle { a: 4, b: 5, c: 6 }, 
+        Triangle { a: 4, b: 6, c: 7 },
+
         // Top face
-        8, 9, 10, 8, 10, 11,
+        Triangle { a: 8, b: 9, c: 10 }, 
+        Triangle { a: 8, b: 10, c: 11 },
+
         // Bottom face
-        12, 15, 14, 12, 14, 13,
+        Triangle { a: 12, b: 13, c: 14 }, 
+        Triangle { a: 12, b: 14, c: 15 },
+
         // Right face
-        16, 19, 18, 16, 18, 17,
+        Triangle { a: 16, b: 17, c: 18 }, 
+        Triangle { a: 16, b: 18, c: 19 },
+        
         // Left face
-        20, 23, 22, 20, 22, 21
+        Triangle { a: 20, b: 21, c: 22 }, 
+        Triangle { a: 20, b: 22, c: 23 }
     ];
     
     // Custom UV mapping where each face has a unique pattern
-    let cube_texcoords = [
+    let cube_texcoords = vec![
         // Front face - standard UVs
-        0.0, 1.0,  1.0, 1.0,  1.0, 0.0,  0.0, 0.0,
+        Vector2::new(0.0, 1.0), 
+        Vector2::new(1.0, 1.0), 
+        Vector2::new(1.0, 0.0), 
+        Vector2::new(0.0, 0.0),
+
         // Back face - flipped horizontally
-        1.0, 1.0,  0.0, 1.0,  0.0, 0.0,  1.0, 0.0,
+        Vector2::new(1.0, 1.0), 
+        Vector2::new(1.0, 0.0), 
+        Vector2::new(0.0, 0.0), 
+        Vector2::new(0.0, 1.0),
+
         // Top face - rotated 90 degrees
-        0.0, 0.0,  0.0, 1.0,  1.0, 1.0,  1.0, 0.0,
+        Vector2::new(0.0, 1.0), 
+        Vector2::new(0.0, 0.0), 
+        Vector2::new(1.0, 0.0), 
+        Vector2::new(1.0, 1.0),
+        
         // Bottom face - centered smaller square
-        0.25, 0.75,  0.75, 0.75,  0.75, 0.25,  0.25, 0.25,
-        // Right face - tiled (2x2)
-        0.0, 2.0,  0.0, 0.0,  2.0, 0.0,  2.0, 2.0,
+        Vector2::new(1.0, 1.0), 
+        Vector2::new(0.0, 1.0), 
+        Vector2::new(0.0, 0.0), 
+        Vector2::new(1.0, 0.0),
+        
+        // Right face
+        Vector2::new(1.0, 1.0), 
+        Vector2::new(1.0, 0.0), 
+        Vector2::new(0.0, 0.0), 
+        Vector2::new(0.0, 1.0),
+        
         // Left face - showing just top-right quadrant
-        0.5, 1.0,  1.0, 1.0,  1.0, 0.5,  0.5, 0.5
+        Vector2::new(0.0, 1.0), 
+        Vector2::new(1.0, 1.0), 
+        Vector2::new(1.0, 0.0), 
+        Vector2::new(0.0, 0.0)
     ];
     
     // Create the custom cube mesh
-    let cube_mesh = builder.create_simple_mesh(
+    let cube_mesh = builder.create_simple_mesh_3d(
         Some("CustomUVCube".to_string()),
         &cube_positions,
         &cube_indices,
         None, // No normals specified (could be calculated)
-        Some(&cube_texcoords),
+        Some(cube_texcoords),
         Some(checker_material)
     );
     

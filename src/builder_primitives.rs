@@ -18,6 +18,15 @@ use crate::constants::{accessor_type, buffer_view_target, component_type};
 use crate::models::Primitive;
 use crate::primitives;
 use std::collections::HashMap;
+use nalgebra::{Point3, Vector2, Vector3};
+
+/// A triangle represented by three vertex indices
+#[derive(Debug, Clone, Copy)]
+pub struct Triangle {
+    pub a: u16,
+    pub b: u16,
+    pub c: u16,
+}
 
 impl GltfBuilder {
     /// Create a simple cubic box mesh with the specified size
@@ -41,77 +50,77 @@ impl GltfBuilder {
         // Box centered at origin with given size
         let half_size = size / 2.0;
         
-        // 8 vertices for a cube (8 corners)
+        // 8 vertices for a cube (8 corners) using Point3
         let positions = vec![
             // Front face (z+)
-            -half_size, -half_size,  half_size,  // 0: bottom-left-front
-             half_size, -half_size,  half_size,  // 1: bottom-right-front
-             half_size,  half_size,  half_size,  // 2: top-right-front
-            -half_size,  half_size,  half_size,  // 3: top-left-front
+            Point3::new(-half_size, -half_size,  half_size),  // 0: bottom-left-front
+            Point3::new( half_size, -half_size,  half_size),  // 1: bottom-right-front
+            Point3::new( half_size,  half_size,  half_size),  // 2: top-right-front
+            Point3::new(-half_size,  half_size,  half_size),  // 3: top-left-front
             
             // Back face (z-)
-            -half_size, -half_size, -half_size,  // 4: bottom-left-back
-             half_size, -half_size, -half_size,  // 5: bottom-right-back
-             half_size,  half_size, -half_size,  // 6: top-right-back
-            -half_size,  half_size, -half_size,  // 7: top-left-back
+            Point3::new(-half_size, -half_size, -half_size),  // 4: bottom-left-back
+            Point3::new( half_size, -half_size, -half_size),  // 5: bottom-right-back
+            Point3::new( half_size,  half_size, -half_size),  // 6: top-right-back
+            Point3::new(-half_size,  half_size, -half_size),  // 7: top-left-back
         ];
         
-        // 12 triangles (2 per face * 6 faces)
+        // 12 triangles (2 per face * 6 faces) using Triangle structs
         let indices = vec![
             // Front face (z+)
-            0, 1, 2,  0, 2, 3,
+            Triangle { a: 0, b: 1, c: 2 }, Triangle { a: 0, b: 2, c: 3 },
             
             // Back face (z-)
-            5, 4, 7,  5, 7, 6,
-            
-            // Left face (x-)
-            4, 0, 3,  4, 3, 7,
-            
-            // Right face (x+)
-            1, 5, 6,  1, 6, 2,
-            
-            // Bottom face (y-)
-            4, 5, 1,  4, 1, 0,
+            Triangle { a: 5, b: 4, c: 7 }, Triangle { a: 5, b: 7, c: 6 },
             
             // Top face (y+)
-            3, 2, 6,  3, 6, 7,
+            Triangle { a: 3, b: 2, c: 6 }, Triangle { a: 3, b: 6, c: 7 },
+            
+            // Bottom face (y-)
+            Triangle { a: 4, b: 5, c: 1 }, Triangle { a: 4, b: 1, c: 0 },
+            
+            // Right face (x+)
+            Triangle { a: 1, b: 5, c: 6 }, Triangle { a: 1, b: 6, c: 2 },
+            
+            // Left face (x-)
+            Triangle { a: 4, b: 0, c: 3 }, Triangle { a: 4, b: 3, c: 7 },
         ];
         
-        // Normals for each vertex
+        // Normals for each vertex using Vector3
         let normals = vec![
             // Front face (z+)
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
+            Vector3::new(0.0, 0.0, 1.0),
+            Vector3::new(0.0, 0.0, 1.0),
+            Vector3::new(0.0, 0.0, 1.0),
+            Vector3::new(0.0, 0.0, 1.0),
             
             // Back face (z-)
-            0.0, 0.0, -1.0,
-            0.0, 0.0, -1.0,
-            0.0, 0.0, -1.0,
-            0.0, 0.0, -1.0,
+            Vector3::new(0.0, 0.0, -1.0),
+            Vector3::new(0.0, 0.0, -1.0),
+            Vector3::new(0.0, 0.0, -1.0),
+            Vector3::new(0.0, 0.0, -1.0),
             
-            // This is incorrect for a cube with shared vertices
-            // Real normal mapping would use a separate vertex for each face
-            // but this is simplified for example purposes
+            // This is simplified for example purposes
+            // In a real implementation we would need more vertices with unique normals
+            // or use a better normal calculation strategy
         ];
         
-        // Simple UV mapping
+        // Simple UV mapping using Vector2
         let uvs = vec![
             // Front face
-            0.0, 1.0,
-            1.0, 1.0,
-            1.0, 0.0,
-            0.0, 0.0,
+            Vector2::new(0.0, 1.0),
+            Vector2::new(1.0, 1.0),
+            Vector2::new(1.0, 0.0),
+            Vector2::new(0.0, 0.0),
             
             // Back face
-            1.0, 1.0,
-            0.0, 1.0,
-            0.0, 0.0,
-            1.0, 0.0,
+            Vector2::new(1.0, 1.0),
+            Vector2::new(0.0, 1.0),
+            Vector2::new(0.0, 0.0),
+            Vector2::new(1.0, 0.0),
         ];
         
-        self.create_simple_mesh(None, &positions, &indices, Some(&normals), Some(&uvs), None)
+        self.create_simple_mesh_3d(None, &positions, &indices, Some(normals), Some(uvs), None)
     }
 
     /// Create a box with the specified material
@@ -120,155 +129,173 @@ impl GltfBuilder {
         let half_size = size / 2.0;
         
         // For a proper cube with separate normals per face, we need to duplicate vertices
-        // 24 vertices for a cube (4 per face * 6 faces)
+        // 24 vertices for a cube (4 per face * 6 faces) using Point3
         let positions = vec![
             // Front face (z+)
-            -half_size, -half_size,  half_size,  // 0: bottom-left
-             half_size, -half_size,  half_size,  // 1: bottom-right
-             half_size,  half_size,  half_size,  // 2: top-right
-            -half_size,  half_size,  half_size,  // 3: top-left
+            Point3::new(-half_size, -half_size,  half_size),
+            Point3::new( half_size, -half_size,  half_size),
+            Point3::new( half_size,  half_size,  half_size),
+            Point3::new(-half_size,  half_size,  half_size),
             
             // Back face (z-)
-            -half_size, -half_size, -half_size,  // 4: bottom-left
-            -half_size,  half_size, -half_size,  // 5: bottom-right
-             half_size,  half_size, -half_size,  // 6: top-right
-            half_size,  -half_size, -half_size,  // 7: top-left
+            Point3::new( half_size, -half_size, -half_size),
+            Point3::new(-half_size, -half_size, -half_size),
+            Point3::new(-half_size,  half_size, -half_size),
+            Point3::new( half_size,  half_size, -half_size),
             
             // Top face (y+)
-            -half_size,  half_size, -half_size,  // 8: back-left
-            -half_size,  half_size,  half_size,  // 9: back-right
-             half_size,  half_size,  half_size,  // 10: front-right
-             half_size,  half_size, -half_size,  // 11: front-left
+            Point3::new(-half_size,  half_size,  half_size),
+            Point3::new( half_size,  half_size,  half_size),
+            Point3::new( half_size,  half_size, -half_size),
+            Point3::new(-half_size,  half_size, -half_size),
             
             // Bottom face (y-)
-            -half_size, -half_size, -half_size,  // 12: back-left
-             half_size, -half_size, -half_size,  // 13: back-right
-             half_size, -half_size,  half_size,  // 14: front-right
-            -half_size, -half_size,  half_size,  // 15: front-left
+            Point3::new( half_size, -half_size,  half_size),
+            Point3::new(-half_size, -half_size,  half_size),
+            Point3::new(-half_size, -half_size, -half_size),
+            Point3::new( half_size, -half_size, -half_size),
             
             // Right face (x+)
-             half_size, -half_size, -half_size,  // 16: bottom-back
-             half_size,  half_size, -half_size,  // 17: top-back
-             half_size,  half_size,  half_size,  // 18: top-front
-             half_size, -half_size,  half_size,  // 19: bottom-front
+            Point3::new( half_size, -half_size,  half_size),
+            Point3::new( half_size, -half_size, -half_size),
+            Point3::new( half_size,  half_size, -half_size),
+            Point3::new( half_size,  half_size,  half_size),
             
             // Left face (x-)
-            -half_size, -half_size, -half_size,  // 20: bottom-back
-            -half_size, -half_size,  half_size,  // 21: top-back
-            -half_size,  half_size,  half_size,  // 22: top-front
-            -half_size,  half_size, -half_size,  // 23: bottom-front
+            Point3::new(-half_size, -half_size, -half_size),
+            Point3::new(-half_size, -half_size,  half_size),
+            Point3::new(-half_size,  half_size,  half_size),
+            Point3::new(-half_size,  half_size, -half_size),
         ];
         
-        // 12 triangles (2 per face * 6 faces), now with correct indexing
+        // Convert positions to flat array for create_simple_mesh
+        let positions_flat: Vec<f32> = positions.iter().flat_map(|p| vec![p.x, p.y, p.z]).collect();
+        
+        // Triangle indices (6 faces * 2 triangles * 3 vertices = 36 indices)
         let indices = vec![
             // Front face
-            0, 1, 2,  0, 2, 3,
+            Triangle { a: 0, b: 1, c: 2 },
+            Triangle { a: 0, b: 2, c: 3 },
             
             // Back face
-            4, 5, 6,  4, 6, 7,
+            Triangle { a: 4, b: 5, c: 6 },
+            Triangle { a: 4, b: 6, c: 7 },
             
             // Top face
-            8, 9, 10,  8, 10, 11,
+            Triangle { a: 8, b: 9, c: 10 },
+            Triangle { a: 8, b: 10, c: 11 },
             
             // Bottom face
-            12, 13, 14,  12, 14, 15,
+            Triangle { a: 12, b: 13, c: 14 },
+            Triangle { a: 12, b: 14, c: 15 },
             
             // Right face
-            16, 17, 18,  16, 18, 19,
+            Triangle { a: 16, b: 17, c: 18 },
+            Triangle { a: 16, b: 18, c: 19 },
             
             // Left face
-            20, 21, 22,  20, 22, 23,
+            Triangle { a: 20, b: 21, c: 22 },
+            Triangle { a: 20, b: 22, c: 23 },
         ];
+        
+        // Convert indices to u16 for create_simple_mesh
+        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
         
         // Normals for each vertex
         let normals = vec![
             // Front face (z+)
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
+            Vector3::new(0.0, 0.0, 1.0),
+            Vector3::new(0.0, 0.0, 1.0),
+            Vector3::new(0.0, 0.0, 1.0),
+            Vector3::new(0.0, 0.0, 1.0),
             
             // Back face (z-)
-            0.0, 0.0, -1.0,
-            0.0, 0.0, -1.0,
-            0.0, 0.0, -1.0,
-            0.0, 0.0, -1.0,
+            Vector3::new(0.0, 0.0, -1.0),
+            Vector3::new(0.0, 0.0, -1.0),
+            Vector3::new(0.0, 0.0, -1.0),
+            Vector3::new(0.0, 0.0, -1.0),
             
             // Top face (y+)
-            0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0,
+            Vector3::new(0.0, 1.0, 0.0),
+            Vector3::new(0.0, 1.0, 0.0),
+            Vector3::new(0.0, 1.0, 0.0),
+            Vector3::new(0.0, 1.0, 0.0),
             
             // Bottom face (y-)
-            0.0, -1.0, 0.0,
-            0.0, -1.0, 0.0,
-            0.0, -1.0, 0.0,
-            0.0, -1.0, 0.0,
+            Vector3::new(0.0, -1.0, 0.0),
+            Vector3::new(0.0, -1.0, 0.0),
+            Vector3::new(0.0, -1.0, 0.0),
+            Vector3::new(0.0, -1.0, 0.0),
             
             // Right face (x+)
-            1.0, 0.0, 0.0,
-            1.0, 0.0, 0.0,
-            1.0, 0.0, 0.0,
-            1.0, 0.0, 0.0,
+            Vector3::new(1.0, 0.0, 0.0),
+            Vector3::new(1.0, 0.0, 0.0),
+            Vector3::new(1.0, 0.0, 0.0),
+            Vector3::new(1.0, 0.0, 0.0),
             
             // Left face (x-)
-            -1.0, 0.0, 0.0,
-            -1.0, 0.0, 0.0,
-            -1.0, 0.0, 0.0,
-            -1.0, 0.0, 0.0,
+            Vector3::new(-1.0, 0.0, 0.0),
+            Vector3::new(-1.0, 0.0, 0.0),
+            Vector3::new(-1.0, 0.0, 0.0),
+            Vector3::new(-1.0, 0.0, 0.0),
         ];
         
-        // UVs for each face
+        // Convert normals to flat array for create_simple_mesh
+        let normals_flat: Vec<f32> = normals.iter().flat_map(|n| vec![n.x, n.y, n.z]).collect();
+        
+        // UVs for each face using Vector2
         let uvs = vec![
             // Front face
-            0.0, 1.0,
-            1.0, 1.0,
-            1.0, 0.0,
-            0.0, 0.0,
+            Vector2::new(0.0, 1.0),
+            Vector2::new(1.0, 1.0),
+            Vector2::new(1.0, 0.0),
+            Vector2::new(0.0, 0.0),
             
             // Back face
-            1.0, 1.0,
-            1.0, 0.0,
-            0.0, 0.0,
-            0.0, 1.0,
+            Vector2::new(1.0, 1.0),
+            Vector2::new(1.0, 0.0),
+            Vector2::new(0.0, 0.0),
+            Vector2::new(0.0, 1.0),
             
             // Top face
-            0.0, 1.0,
-            0.0, 0.0,
-            1.0, 0.0,
-            1.0, 1.0,
+            Vector2::new(0.0, 1.0),
+            Vector2::new(0.0, 0.0),
+            Vector2::new(1.0, 0.0),
+            Vector2::new(1.0, 1.0),
             
             // Bottom face
-            1.0, 1.0,
-            0.0, 1.0,
-            0.0, 0.0,
-            1.0, 0.0,
+            Vector2::new(1.0, 1.0),
+            Vector2::new(0.0, 1.0),
+            Vector2::new(0.0, 0.0),
+            Vector2::new(1.0, 0.0),
             
             // Right face
-            1.0, 1.0,
-            1.0, 0.0,
-            0.0, 0.0,
-            0.0, 1.0,
+            Vector2::new(1.0, 1.0),
+            Vector2::new(1.0, 0.0),
+            Vector2::new(0.0, 0.0),
+            Vector2::new(0.0, 1.0),
             
             // Left face
-            0.0, 1.0,
-            1.0, 1.0,
-            1.0, 0.0,
-            0.0, 0.0,
+            Vector2::new(0.0, 1.0),
+            Vector2::new(1.0, 1.0),
+            Vector2::new(1.0, 0.0),
+            Vector2::new(0.0, 0.0),
         ];
         
-        self.create_simple_mesh(None, &positions, &indices, Some(&normals), Some(&uvs), material)
+        // Convert UVs to flat array for create_simple_mesh
+        let uvs_flat: Vec<f32> = uvs.iter().flat_map(|uv| vec![uv.x, uv.y]).collect();
+        
+        self.create_simple_mesh(None, &positions_flat, &indices_flat, Some(&normals_flat), Some(&uvs_flat), material)
     }
     
     /// Create a mesh with custom geometry and UV mapping
     /// 
     /// # Parameters
     /// * `name` - Optional name for the mesh
-    /// * `positions` - Vertex positions as [x1, y1, z1, x2, y2, z2, ...]
-    /// * `indices` - Vertex indices for triangles
-    /// * `normals` - Optional vertex normals as [x1, y1, z1, x2, y2, z2, ...]
-    /// * `texcoords` - Optional array of UV coordinate sets, each as [u1, v1, u2, v2, ...]. 
+    /// * `positions` - Vertex positions as Vec<Point3<f32>>
+    /// * `indices` - List of triangles, each containing three vertex indices
+    /// * `normals` - Optional vertex normals as Vec<Vector3<f32>>
+    /// * `texcoords` - Optional array of UV coordinate sets, each as Vec<Vector2<f32>>. 
     ///                 The first set becomes TEXCOORD_0, the second TEXCOORD_1, etc.
     /// * `material` - Optional material index to use for the mesh
     /// 
@@ -276,24 +303,24 @@ impl GltfBuilder {
     /// The index of the created mesh
     pub fn create_custom_mesh(&mut self, 
                             name: Option<String>,
-                            positions: &[f32], 
-                            indices: &[u16], 
-                            normals: Option<&[f32]>, 
-                            texcoords: Option<Vec<Vec<f32>>>,
+                            positions: &[Point3<f32>], 
+                            indices: &[Triangle], 
+                            normals: Option<Vec<Vector3<f32>>>, 
+                            texcoords: Option<Vec<Vec<Vector2<f32>>>>,
                             material: Option<usize>) -> usize {
         // Calculate bounds for the positions
-        let (min, max) = if !positions.is_empty() {
-            let mut min = vec![f32::MAX; 3];
-            let mut max = vec![f32::MIN; 3];
+        let (min_point, max_point) = if !positions.is_empty() {
+            let mut min = Point3::new(f32::MAX, f32::MAX, f32::MAX);
+            let mut max = Point3::new(f32::MIN, f32::MIN, f32::MIN);
             
-            for i in (0..positions.len()).step_by(3) {
-                min[0] = min[0].min(positions[i]);
-                min[1] = min[1].min(positions[i + 1]);
-                min[2] = min[2].min(positions[i + 2]);
+            for point in positions {
+                min.x = min.x.min(point.x);
+                min.y = min.y.min(point.y);
+                min.z = min.z.min(point.z);
                 
-                max[0] = max[0].max(positions[i]);
-                max[1] = max[1].max(positions[i + 1]);
-                max[2] = max[2].max(positions[i + 2]);
+                max.x = max.x.max(point.x);
+                max.y = max.y.max(point.y);
+                max.z = max.z.max(point.z);
             }
             
             (Some(min), Some(max))
@@ -301,18 +328,25 @@ impl GltfBuilder {
             (None, None)
         };
         
+        // Convert Point3 min/max to Vec<f32> for accessor
+        let min = min_point.map(|p| vec![p.x, p.y, p.z]);
+        let max = max_point.map(|p| vec![p.x, p.y, p.z]);
+        
+        // Convert positions from nalgebra Point3 to flat array for buffer
+        let flat_positions: Vec<f32> = positions.iter().flat_map(|p| vec![p.x, p.y, p.z]).collect();
+        
         // Add position data to buffer
         let pos_bytes = unsafe {
             std::slice::from_raw_parts(
-                positions.as_ptr() as *const u8,
-                positions.len() * std::mem::size_of::<f32>()
+                flat_positions.as_ptr() as *const u8,
+                flat_positions.len() * std::mem::size_of::<f32>()
             )
         };
         let (pos_offset, pos_length) = self.add_buffer_data(pos_bytes);
         let pos_buffer_view = self.add_buffer_view(pos_offset, pos_length, Some(buffer_view_target::ARRAY_BUFFER));
         
         // Add position accessor
-        let vertex_count = positions.len() / 3;
+        let vertex_count = positions.len();
         let pos_accessor = self.add_accessor(
             pos_buffer_view,
             component_type::FLOAT,
@@ -323,11 +357,16 @@ impl GltfBuilder {
             max
         );
         
+        // Flatten the Triangle structs into a flat list of indices
+        let flat_indices: Vec<u16> = indices.iter()
+            .flat_map(|triangle| vec![triangle.a, triangle.b, triangle.c])
+            .collect();
+            
         // Add index data to buffer
         let idx_bytes = unsafe {
             std::slice::from_raw_parts(
-                indices.as_ptr() as *const u8,
-                indices.len() * std::mem::size_of::<u16>()
+                flat_indices.as_ptr() as *const u8,
+                flat_indices.len() * std::mem::size_of::<u16>()
             )
         };
         let (idx_offset, idx_length) = self.add_buffer_data(idx_bytes);
@@ -337,7 +376,7 @@ impl GltfBuilder {
         let idx_accessor = self.add_accessor(
             idx_buffer_view,
             component_type::UNSIGNED_SHORT,
-            indices.len(),
+            flat_indices.len(),
             accessor_type::SCALAR.to_string(),
             None,
             None,
@@ -350,10 +389,13 @@ impl GltfBuilder {
         
         // Add normals if provided
         if let Some(normal_data) = normals {
+            // Convert normals from Vector3 to flat array for buffer
+            let flat_normals: Vec<f32> = normal_data.iter().flat_map(|n| vec![n.x, n.y, n.z]).collect();
+            
             let norm_bytes = unsafe {
                 std::slice::from_raw_parts(
-                    normal_data.as_ptr() as *const u8,
-                    normal_data.len() * std::mem::size_of::<f32>()
+                    flat_normals.as_ptr() as *const u8,
+                    flat_normals.len() * std::mem::size_of::<f32>()
                 )
             };
             let (norm_offset, norm_length) = self.add_buffer_data(norm_bytes);
@@ -362,7 +404,7 @@ impl GltfBuilder {
             let normal_accessor = self.add_accessor(
                 norm_buffer_view,
                 component_type::FLOAT,
-                normal_data.len() / 3,
+                normal_data.len(),
                 accessor_type::VEC3.to_string(),
                 None,
                 None,
@@ -376,10 +418,13 @@ impl GltfBuilder {
         let mut texcoord_accessors = Vec::new();
         if let Some(texcoord_sets) = texcoords {
             for (i, texcoord_data) in texcoord_sets.iter().enumerate() {
+                // Convert Vector2 to flat array for buffer
+                let flat_texcoords: Vec<f32> = texcoord_data.iter().flat_map(|uv| vec![uv.x, uv.y]).collect();
+                
                 let tc_bytes = unsafe {
                     std::slice::from_raw_parts(
-                        texcoord_data.as_ptr() as *const u8,
-                        texcoord_data.len() * std::mem::size_of::<f32>()
+                        flat_texcoords.as_ptr() as *const u8,
+                        flat_texcoords.len() * std::mem::size_of::<f32>()
                     )
                 };
                 let (tc_offset, tc_length) = self.add_buffer_data(tc_bytes);
@@ -388,7 +433,7 @@ impl GltfBuilder {
                 let tc_accessor = self.add_accessor(
                     tc_buffer_view,
                     component_type::FLOAT,
-                    texcoord_data.len() / 2, // 2 floats per UV
+                    texcoord_data.len(), // Number of Vector2 elements
                     accessor_type::VEC2.to_string(),
                     None,
                     None,
@@ -419,7 +464,7 @@ impl GltfBuilder {
     /// # Parameters
     /// * `name` - Optional name for the mesh
     /// * `positions` - Vertex positions as [x1, y1, z1, x2, y2, z2, ...]
-    /// * `indices` - Vertex indices for triangles
+    /// * `indices` - Vertex indices for triangles as [i1, i2, i3, i4, i5, i6, ...] where each triplet (i1,i2,i3) forms a triangle
     /// * `normals` - Optional vertex normals as [x1, y1, z1, x2, y2, z2, ...]
     /// * `texcoords` - Optional UV coordinates as [u1, v1, u2, v2, ...]
     /// * `material` - Optional material index to use for the mesh
@@ -433,9 +478,70 @@ impl GltfBuilder {
                             normals: Option<&[f32]>, 
                             texcoords: Option<&[f32]>,
                             material: Option<usize>) -> usize {
+        // Convert raw float arrays to nalgebra types
+        let points: Vec<Point3<f32>> = positions
+            .chunks_exact(3)
+            .map(|chunk| Point3::new(chunk[0], chunk[1], chunk[2]))
+            .collect();
+            
+        // Convert flat index array to Triangle structs
+        // Each triplet of indices (i1, i2, i3) forms a triangle
+        let triangles: Vec<Triangle> = indices
+            .chunks_exact(3)
+            .map(|chunk| Triangle { a: chunk[0], b: chunk[1], c: chunk[2] })
+            .collect();
+        
+        // Convert normals if provided
+        let normal_vectors = normals.map(|normal_data| {
+            normal_data
+                .chunks_exact(3)
+                .map(|chunk| Vector3::new(chunk[0], chunk[1], chunk[2]))
+                .collect()
+        });
+        
+        // Convert texture coordinates if provided
         let texcoord_sets = if let Some(texcoords) = texcoords {
+            let uvs: Vec<Vector2<f32>> = texcoords
+                .chunks_exact(2)
+                .map(|chunk| Vector2::new(chunk[0], chunk[1]))
+                .collect();
+                
             let mut sets = Vec::new();
-            sets.push(texcoords.to_vec());
+            sets.push(uvs);
+            Some(sets)
+        } else {
+            None
+        };
+        
+        self.create_custom_mesh(name, &points, &triangles, normal_vectors, texcoord_sets, material)
+    }
+    
+    /// Create a mesh with custom geometry and single UV channel using nalgebra types
+    /// 
+    /// Simplified version of create_custom_mesh for the common case of a single UV channel,
+    /// but using proper 3D math types instead of raw float arrays.
+    /// 
+    /// # Parameters
+    /// * `name` - Optional name for the mesh
+    /// * `positions` - Vertex positions as &[Point3<f32>]
+    /// * `indices` - List of triangles, each containing three vertex indices
+    /// * `normals` - Optional vertex normals as Vec<Vector3<f32>>
+    /// * `texcoords` - Optional UV coordinates as Vec<Vector2<f32>>
+    /// * `material` - Optional material index to use for the mesh
+    /// 
+    /// # Returns
+    /// The index of the created mesh
+    pub fn create_simple_mesh_3d(&mut self, 
+                               name: Option<String>,
+                               positions: &[Point3<f32>], 
+                               indices: &[Triangle], 
+                               normals: Option<Vec<Vector3<f32>>>, 
+                               texcoords: Option<Vec<Vector2<f32>>>,
+                               material: Option<usize>) -> usize {
+        // If we have texture coordinates, create a texcoord set for the mesh
+        let texcoord_sets = if let Some(uvs) = texcoords {
+            let mut sets = Vec::new();
+            sets.push(uvs);
             Some(sets)
         } else {
             None
@@ -480,11 +586,54 @@ impl GltfBuilder {
                       width_segments: usize, 
                       depth_segments: usize,
                       material: Option<usize>) -> usize {
-        let (positions, indices, normals, uvs) = primitives::generate_plane(
+        // Get the raw data from the primitives module
+        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_plane(
             width, depth, width_segments, depth_segments
         );
         
-        self.create_simple_mesh(None, &positions, &indices, Some(&normals), Some(&uvs), material)
+        // Convert raw positions to Point3
+        let mut positions = Vec::new();
+        for i in 0..positions_raw.len() / 3 {
+            positions.push(Point3::new(
+                positions_raw[i * 3],
+                positions_raw[i * 3 + 1],
+                positions_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw indices to Triangle
+        let mut indices = Vec::new();
+        for i in 0..indices_raw.len() / 3 {
+            indices.push(Triangle {
+                a: indices_raw[i * 3],
+                b: indices_raw[i * 3 + 1],
+                c: indices_raw[i * 3 + 2]
+            });
+        }
+        
+        // Convert raw normals to Vector3
+        let mut normals = Vec::new();
+        for i in 0..normals_raw.len() / 3 {
+            normals.push(Vector3::new(
+                normals_raw[i * 3],
+                normals_raw[i * 3 + 1],
+                normals_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw UVs to Vector2
+        let mut uvs = Vec::new();
+        for i in 0..uvs_raw.len() / 2 {
+            uvs.push(Vector2::new(
+                uvs_raw[i * 2],
+                uvs_raw[i * 2 + 1]
+            ));
+        }
+        
+        // Now convert back to flat arrays for create_simple_mesh
+        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
+        
+        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
     }
     
     /// Create a sphere mesh with specified radius and resolution
@@ -520,11 +669,54 @@ impl GltfBuilder {
                        width_segments: usize, 
                        height_segments: usize,
                        material: Option<usize>) -> usize {
-        let (positions, indices, normals, uvs) = primitives::generate_sphere(
+        // Get the raw data from primitives module
+        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_sphere(
             radius, width_segments, height_segments
         );
         
-        self.create_simple_mesh(None, &positions, &indices, Some(&normals), Some(&uvs), material)
+        // Convert raw positions to Point3
+        let mut positions = Vec::new();
+        for i in 0..positions_raw.len() / 3 {
+            positions.push(Point3::new(
+                positions_raw[i * 3],
+                positions_raw[i * 3 + 1],
+                positions_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw indices to Triangle
+        let mut indices = Vec::new();
+        for i in 0..indices_raw.len() / 3 {
+            indices.push(Triangle {
+                a: indices_raw[i * 3],
+                b: indices_raw[i * 3 + 1],
+                c: indices_raw[i * 3 + 2]
+            });
+        }
+        
+        // Convert raw normals to Vector3
+        let mut normals = Vec::new();
+        for i in 0..normals_raw.len() / 3 {
+            normals.push(Vector3::new(
+                normals_raw[i * 3],
+                normals_raw[i * 3 + 1],
+                normals_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw UVs to Vector2
+        let mut uvs = Vec::new();
+        for i in 0..uvs_raw.len() / 2 {
+            uvs.push(Vector2::new(
+                uvs_raw[i * 2],
+                uvs_raw[i * 2 + 1]
+            ));
+        }
+        
+        // Now convert back to flat arrays for create_simple_mesh
+        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
+        
+        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
     }
     
     /// Create a cylinder mesh with customizable dimensions
@@ -575,11 +767,54 @@ impl GltfBuilder {
                          height_segments: usize,
                          open_ended: bool,
                          material: Option<usize>) -> usize {
-        let (positions, indices, normals, uvs) = primitives::generate_cylinder(
+        // Get the raw data from primitives module
+        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_cylinder(
             radius_top, radius_bottom, height, radial_segments, height_segments, open_ended
         );
         
-        self.create_simple_mesh(None, &positions, &indices, Some(&normals), Some(&uvs), material)
+        // Convert raw positions to Point3
+        let mut positions = Vec::new();
+        for i in 0..positions_raw.len() / 3 {
+            positions.push(Point3::new(
+                positions_raw[i * 3],
+                positions_raw[i * 3 + 1],
+                positions_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw indices to Triangle
+        let mut indices = Vec::new();
+        for i in 0..indices_raw.len() / 3 {
+            indices.push(Triangle {
+                a: indices_raw[i * 3],
+                b: indices_raw[i * 3 + 1],
+                c: indices_raw[i * 3 + 2]
+            });
+        }
+        
+        // Convert raw normals to Vector3
+        let mut normals = Vec::new();
+        for i in 0..normals_raw.len() / 3 {
+            normals.push(Vector3::new(
+                normals_raw[i * 3],
+                normals_raw[i * 3 + 1],
+                normals_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw UVs to Vector2
+        let mut uvs = Vec::new();
+        for i in 0..uvs_raw.len() / 2 {
+            uvs.push(Vector2::new(
+                uvs_raw[i * 2],
+                uvs_raw[i * 2 + 1]
+            ));
+        }
+        
+        // Now convert back to flat arrays for create_simple_mesh
+        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
+        
+        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
     }
     
     /// Create a cone mesh
@@ -601,11 +836,54 @@ impl GltfBuilder {
                       height_segments: usize,
                       open_ended: bool,
                       material: Option<usize>) -> usize {
-        let (positions, indices, normals, uvs) = primitives::generate_cone(
+        // Get the raw data from primitives module
+        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_cone(
             radius, height, radial_segments, height_segments, open_ended
         );
         
-        self.create_simple_mesh(None, &positions, &indices, Some(&normals), Some(&uvs), material)
+        // Convert raw positions to Point3
+        let mut positions = Vec::new();
+        for i in 0..positions_raw.len() / 3 {
+            positions.push(Point3::new(
+                positions_raw[i * 3],
+                positions_raw[i * 3 + 1],
+                positions_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw indices to Triangle
+        let mut indices = Vec::new();
+        for i in 0..indices_raw.len() / 3 {
+            indices.push(Triangle {
+                a: indices_raw[i * 3],
+                b: indices_raw[i * 3 + 1],
+                c: indices_raw[i * 3 + 2]
+            });
+        }
+        
+        // Convert raw normals to Vector3
+        let mut normals = Vec::new();
+        for i in 0..normals_raw.len() / 3 {
+            normals.push(Vector3::new(
+                normals_raw[i * 3],
+                normals_raw[i * 3 + 1],
+                normals_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw UVs to Vector2
+        let mut uvs = Vec::new();
+        for i in 0..uvs_raw.len() / 2 {
+            uvs.push(Vector2::new(
+                uvs_raw[i * 2],
+                uvs_raw[i * 2 + 1]
+            ));
+        }
+        
+        // Now convert back to flat arrays for create_simple_mesh
+        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
+        
+        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
     }
     
     /// Create a torus (donut shape) mesh
@@ -625,11 +903,54 @@ impl GltfBuilder {
                        radial_segments: usize, 
                        tubular_segments: usize,
                        material: Option<usize>) -> usize {
-        let (positions, indices, normals, uvs) = primitives::generate_torus(
+        // Get the raw data from primitives module
+        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_torus(
             radius, tube, radial_segments, tubular_segments
         );
         
-        self.create_simple_mesh(None, &positions, &indices, Some(&normals), Some(&uvs), material)
+        // Convert raw positions to Point3
+        let mut positions = Vec::new();
+        for i in 0..positions_raw.len() / 3 {
+            positions.push(Point3::new(
+                positions_raw[i * 3],
+                positions_raw[i * 3 + 1],
+                positions_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw indices to Triangle
+        let mut indices = Vec::new();
+        for i in 0..indices_raw.len() / 3 {
+            indices.push(Triangle {
+                a: indices_raw[i * 3],
+                b: indices_raw[i * 3 + 1],
+                c: indices_raw[i * 3 + 2]
+            });
+        }
+        
+        // Convert raw normals to Vector3
+        let mut normals = Vec::new();
+        for i in 0..normals_raw.len() / 3 {
+            normals.push(Vector3::new(
+                normals_raw[i * 3],
+                normals_raw[i * 3 + 1],
+                normals_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw UVs to Vector2
+        let mut uvs = Vec::new();
+        for i in 0..uvs_raw.len() / 2 {
+            uvs.push(Vector2::new(
+                uvs_raw[i * 2],
+                uvs_raw[i * 2 + 1]
+            ));
+        }
+        
+        // Now convert back to flat arrays for create_simple_mesh
+        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
+        
+        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
     }
     
     /// Create an icosahedron (20-sided polyhedron) mesh
@@ -643,8 +964,51 @@ impl GltfBuilder {
     pub fn create_icosahedron(&mut self, 
                             radius: f32,
                             material: Option<usize>) -> usize {
-        let (positions, indices, normals, uvs) = primitives::generate_icosahedron(radius);
+        // Get the raw data from primitives module
+        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_icosahedron(radius);
         
-        self.create_simple_mesh(None, &positions, &indices, Some(&normals), Some(&uvs), material)
+        // Convert raw positions to Point3
+        let mut positions = Vec::new();
+        for i in 0..positions_raw.len() / 3 {
+            positions.push(Point3::new(
+                positions_raw[i * 3],
+                positions_raw[i * 3 + 1],
+                positions_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw indices to Triangle
+        let mut indices = Vec::new();
+        for i in 0..indices_raw.len() / 3 {
+            indices.push(Triangle {
+                a: indices_raw[i * 3],
+                b: indices_raw[i * 3 + 1],
+                c: indices_raw[i * 3 + 2]
+            });
+        }
+        
+        // Convert raw normals to Vector3
+        let mut normals = Vec::new();
+        for i in 0..normals_raw.len() / 3 {
+            normals.push(Vector3::new(
+                normals_raw[i * 3],
+                normals_raw[i * 3 + 1],
+                normals_raw[i * 3 + 2]
+            ));
+        }
+        
+        // Convert raw UVs to Vector2
+        let mut uvs = Vec::new();
+        for i in 0..uvs_raw.len() / 2 {
+            uvs.push(Vector2::new(
+                uvs_raw[i * 2],
+                uvs_raw[i * 2 + 1]
+            ));
+        }
+        
+        // Now convert back to flat arrays for create_simple_mesh
+        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
+        
+        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
     }
 }

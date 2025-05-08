@@ -4,10 +4,10 @@
 //! for basic 3D primitive shapes such as planes, boxes, spheres, cylinders, and more.
 //!
 //! Each generation function follows the same pattern of returning a tuple with the following components:
-//! - `positions`: Vertex coordinates as a flat array of floats (x1, y1, z1, x2, y2, z2, ...)
-//! - `indices`: Triangle indices using u16 values, defining the triangulation of the mesh
-//! - `normals`: Normal vectors as a flat array of floats, matching the positions array
-//! - `uvs`: Texture coordinates as a flat array of floats (u1, v1, u2, v2, ...)
+//! - `positions`: Vertex coordinates as a vector of Point3<f32>
+//! - `indices`: Triangle indices using the Triangle struct
+//! - `normals`: Normal vectors as a vector of Vector3<f32>
+//! - `uvs`: Texture coordinates as a vector of Vector2<f32>
 //!
 //! These mesh components can be directly used with the `GltfBuilder` to create complete 3D meshes.
 //!
@@ -15,12 +15,15 @@
 //!
 //! ```rust
 //! use mesh_tools::primitives::generate_sphere;
+//! use nalgebra::{Point3, Vector3, Vector2};
 //! 
 //! // Generate a sphere with radius 1.0
 //! let (positions, indices, normals, uvs) = generate_sphere(1.0, 16, 8);
 //! ```
 
 use std::f32::consts::PI;
+use nalgebra::{Point3, Vector3, Vector2};
+use crate::builder_primitives::Triangle;
 
 /// Generate a plane (flat surface) with subdivisions
 /// 
