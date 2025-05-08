@@ -14,10 +14,10 @@
 //! ## Example
 //!
 //! ```rust
-//! use gltf_export::primitives::generate_box;
+//! use mesh_tools::primitives::generate_sphere;
 //! 
-//! // Generate a unit cube (1x1x1)
-//! let (positions, indices, normals, uvs) = generate_box(1.0);
+//! // Generate a sphere with radius 1.0
+//! let (positions, indices, normals, uvs) = generate_sphere(1.0, 16, 8);
 //! ```
 
 use std::f32::consts::PI;

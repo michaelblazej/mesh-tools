@@ -33,6 +33,7 @@ impl GltfBuilder {
     ///
     /// # Example
     /// ```
+    /// use mesh_tools::GltfBuilder;
     /// let mut builder = GltfBuilder::new();
     /// let box_mesh = builder.create_box(2.0); // Creates a 2x2x2 cube
     /// ```
@@ -461,6 +462,7 @@ impl GltfBuilder {
     /// 
     /// # Example
     /// ```
+    /// use mesh_tools::GltfBuilder;
     /// let mut builder = GltfBuilder::new();
     /// 
     /// // Create a material
@@ -501,6 +503,7 @@ impl GltfBuilder {
     /// 
     /// # Example
     /// ```
+    /// use mesh_tools::GltfBuilder;
     /// let mut builder = GltfBuilder::new();
     /// 
     /// // Create a red material
@@ -544,6 +547,7 @@ impl GltfBuilder {
     /// 
     /// # Example
     /// ```
+    /// use mesh_tools::GltfBuilder;
     /// let mut builder = GltfBuilder::new();
     /// 
     /// // Create a blue material

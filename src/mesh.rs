@@ -18,7 +18,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use gltf_export::mesh::MeshBuilder;
+//! use mesh_tools::mesh::MeshBuilder;
 //!
 //! // Create a mesh with custom data
 //! let mesh = MeshBuilder::new(Some("CustomMesh".to_string()))

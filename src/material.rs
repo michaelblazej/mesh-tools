@@ -16,7 +16,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use gltf_export::material;
+//! use mesh_tools::material;
 //!
 //! // Create a red metallic material
 //! let red_metal = material::create_metallic_material(

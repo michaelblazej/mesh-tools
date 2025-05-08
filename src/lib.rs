@@ -1,4 +1,4 @@
-//! # gltf-export: A Rust library for exporting glTF/GLB files
+//! # mesh-tools: A Rust library for exporting glTF/GLB files
 //!
 //! This library provides a high-level API for creating and exporting 3D models in the
 //! [glTF](https://www.khronos.org/gltf/) (GL Transmission Format) standard, which is a 
@@ -17,7 +17,7 @@
 //! ## Basic Usage
 //!
 //! ```rust
-//! use gltf_export::GltfBuilder;
+//! use mesh_tools::GltfBuilder;
 //!
 //! // Create a new glTF builder
 //! let mut builder = GltfBuilder::new();

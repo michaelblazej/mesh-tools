@@ -12,7 +12,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use gltf_export::constants::{component_type, accessor_type};
+//! use mesh_tools::constants::{component_type, accessor_type};
 //!
 //! // When creating an accessor for 3D positions
 //! let component_type_value = component_type::FLOAT; // 5126

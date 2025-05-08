@@ -13,12 +13,13 @@
 //! ## Example
 //!
 //! ```rust
-//! use gltf_export::texture;
-//! use std::path::Path;
+//! use mesh_tools::texture;
+//! use image::DynamicImage;
 //!
-//! // Load a texture from a file
-//! let path = Path::new("texture.png");
-//! let texture_data = texture::load_texture_from_file(path).unwrap();
+//! // Create a test pattern texture
+//! let width = 512;
+//! let height = 512;
+//! let texture_image: DynamicImage = texture::create_uv_test_pattern(width, height);
 //! ```
 
 use image::{DynamicImage, ImageBuffer, Rgba};
