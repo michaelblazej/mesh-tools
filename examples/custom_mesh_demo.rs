@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ];
     
     // Create the custom triangle mesh using create_simple_mesh_3d (single UV channel with nalgebra types)
-    let triangle_mesh = builder.create_simple_mesh_3d(
+    let triangle_mesh = builder.create_simple_mesh(
         Some("Triangle".to_string()),
         &positions,
         &indices,
@@ -235,11 +235,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     ];
     
     // Create the custom cube mesh
-    let cube_mesh = builder.create_simple_mesh_3d(
+    let cube_mesh = builder.create_simple_mesh(
         Some("CustomUVCube".to_string()),
         &cube_positions,
         &cube_indices,
-        None, // No normals specified (could be calculated)
+        None::<Vec<Vector3<f32>>>, // No normals specified (could be calculated)
         Some(cube_texcoords),
         Some(checker_material)
     );

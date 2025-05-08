@@ -22,8 +22,6 @@
 //! ```
 
 use std::f32::consts::PI;
-use nalgebra::{Point3, Vector3, Vector2};
-use crate::builder_primitives::Triangle;
 
 /// Generate a plane (flat surface) with subdivisions
 /// 

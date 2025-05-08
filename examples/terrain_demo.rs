@@ -1,7 +1,6 @@
 use mesh_tools::{GltfBuilder, Triangle};
 use nalgebra::{Point3, Vector2, Vector3};
 use std::error::Error;
-use std::f32::consts::PI;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a new glTF builder

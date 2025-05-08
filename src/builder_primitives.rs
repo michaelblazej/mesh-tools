@@ -120,7 +120,7 @@ impl GltfBuilder {
             Vector2::new(1.0, 0.0),
         ];
         
-        self.create_simple_mesh_3d(None, &positions, &indices, Some(normals), Some(uvs), None)
+        self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), None)
     }
 
     /// Create a box with the specified material
@@ -169,7 +169,6 @@ impl GltfBuilder {
         ];
         
         // Convert positions to flat array for create_simple_mesh
-        let positions_flat: Vec<f32> = positions.iter().flat_map(|p| vec![p.x, p.y, p.z]).collect();
         
         // Triangle indices (6 faces * 2 triangles * 3 vertices = 36 indices)
         let indices = vec![
@@ -199,7 +198,6 @@ impl GltfBuilder {
         ];
         
         // Convert indices to u16 for create_simple_mesh
-        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
         
         // Normals for each vertex
         let normals = vec![
@@ -241,7 +239,6 @@ impl GltfBuilder {
         ];
         
         // Convert normals to flat array for create_simple_mesh
-        let normals_flat: Vec<f32> = normals.iter().flat_map(|n| vec![n.x, n.y, n.z]).collect();
         
         // UVs for each face using Vector2
         let uvs = vec![
@@ -282,10 +279,7 @@ impl GltfBuilder {
             Vector2::new(0.0, 0.0),
         ];
         
-        // Convert UVs to flat array for create_simple_mesh
-        let uvs_flat: Vec<f32> = uvs.iter().flat_map(|uv| vec![uv.x, uv.y]).collect();
-        
-        self.create_simple_mesh(None, &positions_flat, &indices_flat, Some(&normals_flat), Some(&uvs_flat), material)
+        self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
     /// Create a mesh with custom geometry and UV mapping
@@ -457,64 +451,6 @@ impl GltfBuilder {
         self.add_mesh(name, vec![primitive])
     }
     
-    /// Create a mesh with custom geometry and single UV channel
-    /// 
-    /// Simplified version of create_custom_mesh for the common case of a single UV channel
-    /// 
-    /// # Parameters
-    /// * `name` - Optional name for the mesh
-    /// * `positions` - Vertex positions as [x1, y1, z1, x2, y2, z2, ...]
-    /// * `indices` - Vertex indices for triangles as [i1, i2, i3, i4, i5, i6, ...] where each triplet (i1,i2,i3) forms a triangle
-    /// * `normals` - Optional vertex normals as [x1, y1, z1, x2, y2, z2, ...]
-    /// * `texcoords` - Optional UV coordinates as [u1, v1, u2, v2, ...]
-    /// * `material` - Optional material index to use for the mesh
-    /// 
-    /// # Returns
-    /// The index of the created mesh
-    pub fn create_simple_mesh(&mut self, 
-                            name: Option<String>,
-                            positions: &[f32], 
-                            indices: &[u16], 
-                            normals: Option<&[f32]>, 
-                            texcoords: Option<&[f32]>,
-                            material: Option<usize>) -> usize {
-        // Convert raw float arrays to nalgebra types
-        let points: Vec<Point3<f32>> = positions
-            .chunks_exact(3)
-            .map(|chunk| Point3::new(chunk[0], chunk[1], chunk[2]))
-            .collect();
-            
-        // Convert flat index array to Triangle structs
-        // Each triplet of indices (i1, i2, i3) forms a triangle
-        let triangles: Vec<Triangle> = indices
-            .chunks_exact(3)
-            .map(|chunk| Triangle { a: chunk[0], b: chunk[1], c: chunk[2] })
-            .collect();
-        
-        // Convert normals if provided
-        let normal_vectors = normals.map(|normal_data| {
-            normal_data
-                .chunks_exact(3)
-                .map(|chunk| Vector3::new(chunk[0], chunk[1], chunk[2]))
-                .collect()
-        });
-        
-        // Convert texture coordinates if provided
-        let texcoord_sets = if let Some(texcoords) = texcoords {
-            let uvs: Vec<Vector2<f32>> = texcoords
-                .chunks_exact(2)
-                .map(|chunk| Vector2::new(chunk[0], chunk[1]))
-                .collect();
-                
-            let mut sets = Vec::new();
-            sets.push(uvs);
-            Some(sets)
-        } else {
-            None
-        };
-        
-        self.create_custom_mesh(name, &points, &triangles, normal_vectors, texcoord_sets, material)
-    }
     
     /// Create a mesh with custom geometry and single UV channel using nalgebra types
     /// 
@@ -531,7 +467,7 @@ impl GltfBuilder {
     /// 
     /// # Returns
     /// The index of the created mesh
-    pub fn create_simple_mesh_3d(&mut self, 
+    pub fn create_simple_mesh(&mut self, 
                                name: Option<String>,
                                positions: &[Point3<f32>], 
                                indices: &[Triangle], 
@@ -631,9 +567,8 @@ impl GltfBuilder {
         }
         
         // Now convert back to flat arrays for create_simple_mesh
-        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
         
-        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
+        self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
     /// Create a sphere mesh with specified radius and resolution
@@ -714,9 +649,8 @@ impl GltfBuilder {
         }
         
         // Now convert back to flat arrays for create_simple_mesh
-        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
         
-        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
+        self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
     /// Create a cylinder mesh with customizable dimensions
@@ -812,9 +746,8 @@ impl GltfBuilder {
         }
         
         // Now convert back to flat arrays for create_simple_mesh
-        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
         
-        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
+        self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
     /// Create a cone mesh
@@ -881,9 +814,8 @@ impl GltfBuilder {
         }
         
         // Now convert back to flat arrays for create_simple_mesh
-        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
         
-        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
+        self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
     /// Create a torus (donut shape) mesh
@@ -948,9 +880,8 @@ impl GltfBuilder {
         }
         
         // Now convert back to flat arrays for create_simple_mesh
-        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
         
-        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
+        self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
     /// Create an icosahedron (20-sided polyhedron) mesh
@@ -1007,8 +938,7 @@ impl GltfBuilder {
         }
         
         // Now convert back to flat arrays for create_simple_mesh
-        let indices_flat: Vec<u16> = indices.iter().flat_map(|t| vec![t.a as u16, t.b as u16, t.c as u16]).collect();
         
-        self.create_simple_mesh(None, &positions_raw, &indices_flat, Some(&normals_raw), Some(&uvs_raw), material)
+        self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
 }
