@@ -542,52 +542,12 @@ impl GltfBuilder {
                       width_segments: usize, 
                       depth_segments: usize,
                       material: Option<usize>) -> usize {
-        // Get the raw data from the primitives module
-        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_plane(
+        // Get the mesh data directly as nalgebra types
+        let (positions, indices, normals, uvs) = primitives::generate_plane(
             width, depth, width_segments, depth_segments
         );
         
-        // Convert raw positions to Point3
-        let mut positions = Vec::new();
-        for i in 0..positions_raw.len() / 3 {
-            positions.push(Point3::new(
-                positions_raw[i * 3],
-                positions_raw[i * 3 + 1],
-                positions_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw indices to Triangle
-        let mut indices = Vec::new();
-        for i in 0..indices_raw.len() / 3 {
-            indices.push(Triangle {
-                a: indices_raw[i * 3] as u32,
-                b: indices_raw[i * 3 + 1] as u32,
-                c: indices_raw[i * 3 + 2] as u32
-            });
-        }
-        
-        // Convert raw normals to Vector3
-        let mut normals = Vec::new();
-        for i in 0..normals_raw.len() / 3 {
-            normals.push(Vector3::new(
-                normals_raw[i * 3],
-                normals_raw[i * 3 + 1],
-                normals_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw UVs to Vector2
-        let mut uvs = Vec::new();
-        for i in 0..uvs_raw.len() / 2 {
-            uvs.push(Vector2::new(
-                uvs_raw[i * 2],
-                uvs_raw[i * 2 + 1]
-            ));
-        }
-        
-        // Now convert back to flat arrays for create_simple_mesh
-        
+        // Create the mesh using the nalgebra types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
@@ -624,52 +584,12 @@ impl GltfBuilder {
                        width_segments: usize, 
                        height_segments: usize,
                        material: Option<usize>) -> usize {
-        // Get the raw data from primitives module
-        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_sphere(
+        // Get the mesh data directly as nalgebra types
+        let (positions, indices, normals, uvs) = primitives::generate_sphere(
             radius, width_segments, height_segments
         );
         
-        // Convert raw positions to Point3
-        let mut positions = Vec::new();
-        for i in 0..positions_raw.len() / 3 {
-            positions.push(Point3::new(
-                positions_raw[i * 3],
-                positions_raw[i * 3 + 1],
-                positions_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw indices to Triangle
-        let mut indices = Vec::new();
-        for i in 0..indices_raw.len() / 3 {
-            indices.push(Triangle {
-                a: indices_raw[i * 3] as u32,
-                b: indices_raw[i * 3 + 1] as u32,
-                c: indices_raw[i * 3 + 2] as u32
-            });
-        }
-        
-        // Convert raw normals to Vector3
-        let mut normals = Vec::new();
-        for i in 0..normals_raw.len() / 3 {
-            normals.push(Vector3::new(
-                normals_raw[i * 3],
-                normals_raw[i * 3 + 1],
-                normals_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw UVs to Vector2
-        let mut uvs = Vec::new();
-        for i in 0..uvs_raw.len() / 2 {
-            uvs.push(Vector2::new(
-                uvs_raw[i * 2],
-                uvs_raw[i * 2 + 1]
-            ));
-        }
-        
-        // Now convert back to flat arrays for create_simple_mesh
-        
+        // Create the mesh using the nalgebra types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
@@ -721,52 +641,12 @@ impl GltfBuilder {
                          height_segments: usize,
                          open_ended: bool,
                          material: Option<usize>) -> usize {
-        // Get the raw data from primitives module
-        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_cylinder(
+        // Get the mesh data directly as nalgebra types
+        let (positions, indices, normals, uvs) = primitives::generate_cylinder(
             radius_top, radius_bottom, height, radial_segments, height_segments, open_ended
         );
         
-        // Convert raw positions to Point3
-        let mut positions = Vec::new();
-        for i in 0..positions_raw.len() / 3 {
-            positions.push(Point3::new(
-                positions_raw[i * 3],
-                positions_raw[i * 3 + 1],
-                positions_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw indices to Triangle
-        let mut indices = Vec::new();
-        for i in 0..indices_raw.len() / 3 {
-            indices.push(Triangle {
-                a: indices_raw[i * 3] as u32,
-                b: indices_raw[i * 3 + 1] as u32,
-                c: indices_raw[i * 3 + 2] as u32
-            });
-        }
-        
-        // Convert raw normals to Vector3
-        let mut normals = Vec::new();
-        for i in 0..normals_raw.len() / 3 {
-            normals.push(Vector3::new(
-                normals_raw[i * 3],
-                normals_raw[i * 3 + 1],
-                normals_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw UVs to Vector2
-        let mut uvs = Vec::new();
-        for i in 0..uvs_raw.len() / 2 {
-            uvs.push(Vector2::new(
-                uvs_raw[i * 2],
-                uvs_raw[i * 2 + 1]
-            ));
-        }
-        
-        // Now convert back to flat arrays for create_simple_mesh
-        
+        // Create the mesh using the nalgebra types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
@@ -789,52 +669,12 @@ impl GltfBuilder {
                       height_segments: usize,
                       open_ended: bool,
                       material: Option<usize>) -> usize {
-        // Get the raw data from primitives module
-        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_cone(
+        // Get the mesh data directly as nalgebra types
+        let (positions, indices, normals, uvs) = primitives::generate_cone(
             radius, height, radial_segments, height_segments, open_ended
         );
         
-        // Convert raw positions to Point3
-        let mut positions = Vec::new();
-        for i in 0..positions_raw.len() / 3 {
-            positions.push(Point3::new(
-                positions_raw[i * 3],
-                positions_raw[i * 3 + 1],
-                positions_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw indices to Triangle
-        let mut indices = Vec::new();
-        for i in 0..indices_raw.len() / 3 {
-            indices.push(Triangle {
-                a: indices_raw[i * 3] as u32,
-                b: indices_raw[i * 3 + 1] as u32,
-                c: indices_raw[i * 3 + 2] as u32
-            });
-        }
-        
-        // Convert raw normals to Vector3
-        let mut normals = Vec::new();
-        for i in 0..normals_raw.len() / 3 {
-            normals.push(Vector3::new(
-                normals_raw[i * 3],
-                normals_raw[i * 3 + 1],
-                normals_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw UVs to Vector2
-        let mut uvs = Vec::new();
-        for i in 0..uvs_raw.len() / 2 {
-            uvs.push(Vector2::new(
-                uvs_raw[i * 2],
-                uvs_raw[i * 2 + 1]
-            ));
-        }
-        
-        // Now convert back to flat arrays for create_simple_mesh
-        
+        // Create the mesh using the nalgebra types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
@@ -855,52 +695,12 @@ impl GltfBuilder {
                        radial_segments: usize, 
                        tubular_segments: usize,
                        material: Option<usize>) -> usize {
-        // Get the raw data from primitives module
-        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_torus(
+        // Get the mesh data directly as nalgebra types
+        let (positions, indices, normals, uvs) = primitives::generate_torus(
             radius, tube, radial_segments, tubular_segments
         );
         
-        // Convert raw positions to Point3
-        let mut positions = Vec::new();
-        for i in 0..positions_raw.len() / 3 {
-            positions.push(Point3::new(
-                positions_raw[i * 3],
-                positions_raw[i * 3 + 1],
-                positions_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw indices to Triangle
-        let mut indices = Vec::new();
-        for i in 0..indices_raw.len() / 3 {
-            indices.push(Triangle {
-                a: indices_raw[i * 3] as u32,
-                b: indices_raw[i * 3 + 1] as u32,
-                c: indices_raw[i * 3 + 2] as u32
-            });
-        }
-        
-        // Convert raw normals to Vector3
-        let mut normals = Vec::new();
-        for i in 0..normals_raw.len() / 3 {
-            normals.push(Vector3::new(
-                normals_raw[i * 3],
-                normals_raw[i * 3 + 1],
-                normals_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw UVs to Vector2
-        let mut uvs = Vec::new();
-        for i in 0..uvs_raw.len() / 2 {
-            uvs.push(Vector2::new(
-                uvs_raw[i * 2],
-                uvs_raw[i * 2 + 1]
-            ));
-        }
-        
-        // Now convert back to flat arrays for create_simple_mesh
-        
+        // Create the mesh using the nalgebra types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
@@ -915,48 +715,10 @@ impl GltfBuilder {
     pub fn create_icosahedron(&mut self, 
                             radius: f32,
                             material: Option<usize>) -> usize {
-        // Get the raw data from primitives module
-        let (positions_raw, indices_raw, normals_raw, uvs_raw) = primitives::generate_icosahedron(radius);
+        // Get the mesh data directly as nalgebra types
+        let (positions, indices, normals, uvs) = primitives::generate_icosahedron(radius);
         
-        // Convert raw positions to Point3
-        let mut positions = Vec::new();
-        for i in 0..positions_raw.len() / 3 {
-            positions.push(Point3::new(
-                positions_raw[i * 3],
-                positions_raw[i * 3 + 1],
-                positions_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw indices to Triangle
-        let mut indices = Vec::new();
-        for i in 0..indices_raw.len() / 3 {
-            indices.push(Triangle {
-                a: indices_raw[i * 3] as u32,
-                b: indices_raw[i * 3 + 1] as u32,
-                c: indices_raw[i * 3 + 2] as u32
-            });
-        }
-        
-        // Convert raw normals to Vector3
-        let mut normals = Vec::new();
-        for i in 0..normals_raw.len() / 3 {
-            normals.push(Vector3::new(
-                normals_raw[i * 3],
-                normals_raw[i * 3 + 1],
-                normals_raw[i * 3 + 2]
-            ));
-        }
-        
-        // Convert raw UVs to Vector2
-        let mut uvs = Vec::new();
-        for i in 0..uvs_raw.len() / 2 {
-            uvs.push(Vector2::new(
-                uvs_raw[i * 2],
-                uvs_raw[i * 2 + 1]
-            ));
-        }
-        
+        // Create the mesh using the nalgebra types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
 }

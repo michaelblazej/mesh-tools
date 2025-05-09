@@ -22,6 +22,8 @@
 //! ```
 
 use std::f32::consts::PI;
+use nalgebra::{Point3, Vector2, Vector3};
+use crate::builder_primitives::Triangle;
 
 /// Generate a plane (flat surface) with subdivisions
 /// 
@@ -38,7 +40,7 @@ pub fn generate_plane(
     depth: f32,
     width_segments: usize,
     depth_segments: usize,
-) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+) -> (Vec<Point3<f32>>, Vec<Triangle>, Vec<Vector3<f32>>, Vec<Vector2<f32>>) {
     let width_half = width / 2.0;
     let depth_half = depth / 2.0;
     
@@ -66,18 +68,13 @@ pub fn generate_plane(
             let z_pos = z_percent * depth - depth_half;
             
             // Position
-            positions.push(x_pos);
-            positions.push(0.0);  // Y is always 0 for a plane
-            positions.push(z_pos);
+            positions.push(Point3::new(x_pos, 0.0, z_pos));
             
             // Normal
-            normals.push(0.0);
-            normals.push(1.0);
-            normals.push(0.0);
+            normals.push(Vector3::new(0.0, 1.0, 0.0));
             
             // UV
-            uvs.push(x_percent);
-            uvs.push(1.0 - z_percent);  // Flip Y for texture coordinates
+            uvs.push(Vector2::new(x_percent, 1.0 - z_percent));  // Flip Y for texture coordinates
         }
     }
     
@@ -86,19 +83,14 @@ pub fn generate_plane(
     
     for z in 0..grid_z {
         for x in 0..grid_x {
-            let a = (z * vertices_per_row + x) as u16;
-            let b = (z * vertices_per_row + x + 1) as u16;
-            let c = ((z + 1) * vertices_per_row + x + 1) as u16;
-            let d = ((z + 1) * vertices_per_row + x) as u16;
+            let a = (z * vertices_per_row + x) as u32;
+            let b = (z * vertices_per_row + x + 1) as u32;
+            let c = ((z + 1) * vertices_per_row + x + 1) as u32;
+            let d = ((z + 1) * vertices_per_row + x) as u32;
             
             // Two triangles per grid cell
-            indices.push(a);
-            indices.push(b);
-            indices.push(d);
-            
-            indices.push(b);
-            indices.push(c);
-            indices.push(d);
+            indices.push(Triangle::new(a, b, d));
+            indices.push(Triangle::new(b, c, d));
         }
     }
     
@@ -118,7 +110,7 @@ pub fn generate_sphere(
     radius: f32,
     width_segments: usize,
     height_segments: usize,
-) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+) -> (Vec<Point3<f32>>, Vec<Triangle>, Vec<Vector3<f32>>, Vec<Vector2<f32>>) {
     let width_segments = width_segments.max(3);
     let height_segments = height_segments.max(2);
     
@@ -142,19 +134,14 @@ pub fn generate_sphere(
             let z_pos = radius * theta.cos() * phi.sin();
             
             // Position
-            positions.push(x_pos);
-            positions.push(y_pos);
-            positions.push(z_pos);
+            positions.push(Point3::new(x_pos, y_pos, z_pos));
             
             // Normal (normalized position)
             let length = (x_pos * x_pos + y_pos * y_pos + z_pos * z_pos).sqrt();
-            normals.push(x_pos / length);
-            normals.push(y_pos / length);
-            normals.push(z_pos / length);
+            normals.push(Vector3::new(x_pos / length, y_pos / length, z_pos / length));
             
             // UV
-            uvs.push(u);
-            uvs.push(1.0 - v);  // Flip V for texture coordinates
+            uvs.push(Vector2::new(u, 1.0 - v));  // Flip V for texture coordinates
         }
     }
     
@@ -163,23 +150,19 @@ pub fn generate_sphere(
     
     for y in 0..height_segments {
         for x in 0..width_segments {
-            let a = (y * vertices_per_row + x) as u16;
-            let b = (y * vertices_per_row + x + 1) as u16;
-            let c = ((y + 1) * vertices_per_row + x + 1) as u16;
-            let d = ((y + 1) * vertices_per_row + x) as u16;
+            let a = (y * vertices_per_row + x) as u32;
+            let b = (y * vertices_per_row + x + 1) as u32;
+            let c = ((y + 1) * vertices_per_row + x + 1) as u32;
+            let d = ((y + 1) * vertices_per_row + x) as u32;
             
             // Two triangles per grid cell
             // Except at the poles where we have single triangles
             if y != 0 {
-                indices.push(a);
-                indices.push(b);
-                indices.push(d);
+                indices.push(Triangle::new(a, b, d));
             }
             
             if y != height_segments - 1 {
-                indices.push(b);
-                indices.push(c);
-                indices.push(d);
+                indices.push(Triangle::new(b, c, d));
             }
         }
     }
@@ -206,7 +189,7 @@ pub fn generate_cylinder(
     radial_segments: usize,
     height_segments: usize,
     open_ended: bool,
-) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+) -> (Vec<Point3<f32>>, Vec<Triangle>, Vec<Vector3<f32>>, Vec<Vector2<f32>>) {
     let radial_segments = radial_segments.max(3);
     let height_segments = height_segments.max(1);
     
@@ -251,19 +234,14 @@ pub fn generate_cylinder(
             let cos_theta = theta.cos();
             
             // Position
-            positions.push(radius * cos_theta);
-            positions.push(y_pos);
-            positions.push(radius * sin_theta);
+            positions.push(Point3::new(radius * cos_theta, y_pos, radius * sin_theta));
             
             // Normal
             let (nx, ny, nz) = get_slope_normal(radius, slope_factor, u);
-            normals.push(nx);
-            normals.push(ny);
-            normals.push(nz);
+            normals.push(Vector3::new(nx, ny, nz));
             
             // UV
-            uvs.push(u);
-            uvs.push(1.0 - v);
+            uvs.push(Vector2::new(u, 1.0 - v));
         }
     }
     
@@ -272,19 +250,14 @@ pub fn generate_cylinder(
     
     for y in 0..height_segments {
         for x in 0..radial_segments {
-            let a = (y * vertices_per_row + x) as u16;
-            let b = (y * vertices_per_row + x + 1) as u16;
-            let c = ((y + 1) * vertices_per_row + x + 1) as u16;
-            let d = ((y + 1) * vertices_per_row + x) as u16;
+            let a = (y * vertices_per_row + x) as u32;
+            let b = (y * vertices_per_row + x + 1) as u32;
+            let c = ((y + 1) * vertices_per_row + x + 1) as u32;
+            let d = ((y + 1) * vertices_per_row + x) as u32;
             
             // Two triangles per grid cell
-            indices.push(a);
-            indices.push(b);
-            indices.push(d);
-            
-            indices.push(b);
-            indices.push(c);
-            indices.push(d);
+            indices.push(Triangle::new(a, b, d));
+            indices.push(Triangle::new(b, c, d));
         }
     }
     
@@ -294,16 +267,11 @@ pub fn generate_cylinder(
         
         // Top cap
         // Center vertex
-        positions.push(0.0);
-        positions.push(height / 2.0);
-        positions.push(0.0);
+        positions.push(Point3::new(0.0, height / 2.0, 0.0));
         
-        normals.push(0.0);
-        normals.push(1.0);
-        normals.push(0.0);
+        normals.push(Vector3::new(0.0, 1.0, 0.0));
         
-        uvs.push(0.5);
-        uvs.push(0.5);
+        uvs.push(Vector2::new(0.5, 0.5));
         
         // Cap vertices
         for x in 0..=radial_segments {
@@ -314,43 +282,35 @@ pub fn generate_cylinder(
             let sin_theta = theta.sin();
             
             // Position
-            positions.push(radius_top * cos_theta);
-            positions.push(height / 2.0);
-            positions.push(radius_top * sin_theta);
+            positions.push(Point3::new(radius_top * cos_theta, height / 2.0, radius_top * sin_theta));
             
             // Normal
-            normals.push(0.0);
-            normals.push(1.0);
-            normals.push(0.0);
+            normals.push(Vector3::new(0.0, 1.0, 0.0));
             
             // UV
-            uvs.push(cos_theta * 0.5 + 0.5);
-            uvs.push(sin_theta * 0.5 + 0.5);
+            uvs.push(Vector2::new(cos_theta * 0.5 + 0.5, sin_theta * 0.5 + 0.5));
         }
         
         // Top cap indices
-        let center_index = start_index as u16;
+        let center_index = start_index as u32;
         
         for x in 0..radial_segments {
-            indices.push(center_index);
-            indices.push(center_index + (x + 1) as u16);
-            indices.push(center_index + (x + 2) as u16);
+            indices.push(Triangle::new(
+                center_index,
+                center_index + (x + 1) as u32,
+                center_index + (x + 2) as u32
+            ));
         }
         
         // Bottom cap
         let start_index = positions.len() / 3;
         
         // Center vertex
-        positions.push(0.0);
-        positions.push(-height / 2.0);
-        positions.push(0.0);
+        positions.push(Point3::new(0.0, -height / 2.0, 0.0));
         
-        normals.push(0.0);
-        normals.push(-1.0);
-        normals.push(0.0);
+        normals.push(Vector3::new(0.0, -1.0, 0.0));
         
-        uvs.push(0.5);
-        uvs.push(0.5);
+        uvs.push(Vector2::new(0.5, 0.5));
         
         // Cap vertices
         for x in 0..=radial_segments {
@@ -361,27 +321,24 @@ pub fn generate_cylinder(
             let sin_theta = theta.sin();
             
             // Position
-            positions.push(radius_bottom * cos_theta);
-            positions.push(-height / 2.0);
-            positions.push(radius_bottom * sin_theta);
+            positions.push(Point3::new(radius_bottom * cos_theta, -height / 2.0, radius_bottom * sin_theta));
             
             // Normal
-            normals.push(0.0);
-            normals.push(-1.0);
-            normals.push(0.0);
+            normals.push(Vector3::new(0.0, -1.0, 0.0));
             
             // UV
-            uvs.push(cos_theta * 0.5 + 0.5);
-            uvs.push(sin_theta * 0.5 + 0.5);
+            uvs.push(Vector2::new(cos_theta * 0.5 + 0.5, sin_theta * 0.5 + 0.5));
         }
         
         // Bottom cap indices
-        let center_index = start_index as u16;
+        let center_index = start_index as u32;
         
         for x in 0..radial_segments {
-            indices.push(center_index);
-            indices.push(center_index + (x + 2) as u16);
-            indices.push(center_index + (x + 1) as u16);
+            indices.push(Triangle::new(
+                center_index,
+                center_index + (x + 2) as u32,
+                center_index + (x + 1) as u32
+            ));
         }
     }
     
@@ -405,7 +362,7 @@ pub fn generate_cone(
     radial_segments: usize,
     height_segments: usize,
     open_ended: bool,
-) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+) -> (Vec<Point3<f32>>, Vec<Triangle>, Vec<Vector3<f32>>, Vec<Vector2<f32>>) {
     generate_cylinder(0.0, radius, height, radial_segments, height_segments, open_ended)
 }
 
@@ -424,7 +381,7 @@ pub fn generate_torus(
     tube: f32,
     radial_segments: usize,
     tubular_segments: usize,
-) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+) -> (Vec<Point3<f32>>, Vec<Triangle>, Vec<Vector3<f32>>, Vec<Vector2<f32>>) {
     let radial_segments = radial_segments.max(2);
     let tubular_segments = tubular_segments.max(3);
     
@@ -444,9 +401,7 @@ pub fn generate_torus(
             let y = (radius + tube * v.cos()) * u.sin();
             let z = tube * v.sin();
             
-            positions.push(x);
-            positions.push(y);
-            positions.push(z);
+            positions.push(Point3::new(x, y, z));
             
             // Normal
             let center_x = radius * u.cos();
@@ -458,32 +413,24 @@ pub fn generate_torus(
             
             // Normalize
             let length = (nx * nx + ny * ny + nz * nz).sqrt();
-            normals.push(nx / length);
-            normals.push(ny / length);
-            normals.push(nz / length);
+            normals.push(Vector3::new(nx / length, ny / length, nz / length));
             
             // UV
-            uvs.push(i as f32 / tubular_segments as f32);
-            uvs.push(j as f32 / radial_segments as f32);
+            uvs.push(Vector2::new(i as f32 / tubular_segments as f32, j as f32 / radial_segments as f32));
         }
     }
     
     // Generate indices
     for j in 0..radial_segments {
         for i in 0..tubular_segments {
-            let a = (j * (tubular_segments + 1) + i) as u16;
-            let b = (j * (tubular_segments + 1) + i + 1) as u16;
-            let c = ((j + 1) * (tubular_segments + 1) + i + 1) as u16;
-            let d = ((j + 1) * (tubular_segments + 1) + i) as u16;
+            let a = (j * (tubular_segments + 1) + i) as u32;
+            let b = (j * (tubular_segments + 1) + i + 1) as u32;
+            let c = ((j + 1) * (tubular_segments + 1) + i + 1) as u32;
+            let d = ((j + 1) * (tubular_segments + 1) + i) as u32;
             
             // Two triangles per cell
-            indices.push(a);
-            indices.push(b);
-            indices.push(d);
-            
-            indices.push(b);
-            indices.push(c);
-            indices.push(d);
+            indices.push(Triangle::new(a, b, d));
+            indices.push(Triangle::new(b, c, d));
         }
     }
     
@@ -497,7 +444,7 @@ pub fn generate_torus(
 /// 
 /// # Returns
 /// Tuple of (positions, indices, normals, uvs)
-pub fn generate_icosahedron(radius: f32) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f32>) {
+pub fn generate_icosahedron(radius: f32) -> (Vec<Point3<f32>>, Vec<Triangle>, Vec<Vector3<f32>>, Vec<Vector2<f32>>) {
     // Constants for icosahedron construction
     let t = (1.0 + 5.0_f32.sqrt()) / 2.0;
     
@@ -533,21 +480,16 @@ pub fn generate_icosahedron(radius: f32) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f
             vertex[2] / length * radius,
         ];
         
-        positions.push(normalized[0]);
-        positions.push(normalized[1]);
-        positions.push(normalized[2]);
+        positions.push(Point3::new(normalized[0], normalized[1], normalized[2]));
         
         // Normals (same as normalized positions)
-        normals.push(normalized[0] / radius);
-        normals.push(normalized[1] / radius);
-        normals.push(normalized[2] / radius);
+        normals.push(Vector3::new(normalized[0] / radius, normalized[1] / radius, normalized[2] / radius));
         
         // Basic UV mapping (spherical projection)
         let u = 0.5 + (normalized[0] / radius).atan2(normalized[2] / radius) / (2.0 * PI);
         let v = 0.5 - (normalized[1] / radius).asin() / PI;
         
-        uvs.push(u);
-        uvs.push(v);
+        uvs.push(Vector2::new(u, v));
     }
     
     // The 20 triangles of the icosahedron
@@ -579,9 +521,7 @@ pub fn generate_icosahedron(radius: f32) -> (Vec<f32>, Vec<u16>, Vec<f32>, Vec<f
     
     // Add triangle indices
     for tri in &triangle_indices {
-        indices.push(tri[0] as u16);
-        indices.push(tri[1] as u16);
-        indices.push(tri[2] as u16);
+        indices.push(Triangle::new(tri[0] as u32, tri[1] as u32, tri[2] as u32));
     }
     
     (positions, indices, normals, uvs)
