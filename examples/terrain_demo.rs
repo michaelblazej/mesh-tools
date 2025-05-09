@@ -127,16 +127,16 @@ fn generate_terrain_mesh(
             
             // First triangle as Triangle struct
             indices.push(Triangle {
-                a: tl as u16,
-                b: bl as u16,
-                c: tr as u16
+                a: tl as u32,
+                b: bl as u32,
+                c: tr as u32
             });
             
             // Second triangle as Triangle struct
             indices.push(Triangle {
-                a: tr as u16,
-                b: bl as u16,
-                c: br as u16
+                a: tr as u32,
+                b: bl as u32,
+                c: br as u32
             });
             
             // Also keep raw indices for the normals calculation and material sorting
@@ -185,11 +185,11 @@ fn generate_terrain_mesh(
         let slope = 1.0 - normal_y; // 0 for flat, 1 for vertical
         
         // Create a Triangle struct from the indices
-        let triangle = Triangle {
-            a: triangle[0],
-            b: triangle[1],
-            c: triangle[2],
-        };
+        let triangle = Triangle::new(
+            triangle[0] as u32,
+            triangle[1] as u32,
+            triangle[2] as u32
+        );
         
         // Categorize triangle based on height and slope
         if avg_height < water_threshold {

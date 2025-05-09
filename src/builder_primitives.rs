@@ -21,11 +21,23 @@ use std::collections::HashMap;
 use nalgebra::{Point3, Vector2, Vector3};
 
 /// A triangle represented by three vertex indices
-#[derive(Debug, Clone, Copy)]
+///
+/// Uses u32 indices to support meshes with more than 65,535 vertices.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Triangle {
-    pub a: u16,
-    pub b: u16,
-    pub c: u16,
+    /// First vertex index
+    pub a: u32,
+    /// Second vertex index
+    pub b: u32,
+    /// Third vertex index
+    pub c: u32,
+}
+
+impl Triangle {
+    /// Create a new triangle with the given vertex indices
+    pub fn new(a: u32, b: u32, c: u32) -> Self {
+        Self { a, b, c }
+    }
 }
 
 impl GltfBuilder {
@@ -352,7 +364,7 @@ impl GltfBuilder {
         );
         
         // Flatten the Triangle structs into a flat list of indices
-        let flat_indices: Vec<u16> = indices.iter()
+        let flat_indices: Vec<u32> = indices.iter()
             .flat_map(|triangle| vec![triangle.a, triangle.b, triangle.c])
             .collect();
             
@@ -360,7 +372,7 @@ impl GltfBuilder {
         let idx_bytes = unsafe {
             std::slice::from_raw_parts(
                 flat_indices.as_ptr() as *const u8,
-                flat_indices.len() * std::mem::size_of::<u16>()
+                flat_indices.len() * std::mem::size_of::<u32>()
             )
         };
         let (idx_offset, idx_length) = self.add_buffer_data(idx_bytes);
@@ -369,7 +381,7 @@ impl GltfBuilder {
         // Add index accessor
         let idx_accessor = self.add_accessor(
             idx_buffer_view,
-            component_type::UNSIGNED_SHORT,
+            component_type::UNSIGNED_INT,  // Use UNSIGNED_INT for u32 indices
             flat_indices.len(),
             accessor_type::SCALAR.to_string(),
             None,
@@ -541,9 +553,9 @@ impl GltfBuilder {
         let mut indices = Vec::new();
         for i in 0..indices_raw.len() / 3 {
             indices.push(Triangle {
-                a: indices_raw[i * 3],
-                b: indices_raw[i * 3 + 1],
-                c: indices_raw[i * 3 + 2]
+                a: indices_raw[i * 3] as u32,
+                b: indices_raw[i * 3 + 1] as u32,
+                c: indices_raw[i * 3 + 2] as u32
             });
         }
         
@@ -623,9 +635,9 @@ impl GltfBuilder {
         let mut indices = Vec::new();
         for i in 0..indices_raw.len() / 3 {
             indices.push(Triangle {
-                a: indices_raw[i * 3],
-                b: indices_raw[i * 3 + 1],
-                c: indices_raw[i * 3 + 2]
+                a: indices_raw[i * 3] as u32,
+                b: indices_raw[i * 3 + 1] as u32,
+                c: indices_raw[i * 3 + 2] as u32
             });
         }
         
@@ -720,9 +732,9 @@ impl GltfBuilder {
         let mut indices = Vec::new();
         for i in 0..indices_raw.len() / 3 {
             indices.push(Triangle {
-                a: indices_raw[i * 3],
-                b: indices_raw[i * 3 + 1],
-                c: indices_raw[i * 3 + 2]
+                a: indices_raw[i * 3] as u32,
+                b: indices_raw[i * 3 + 1] as u32,
+                c: indices_raw[i * 3 + 2] as u32
             });
         }
         
@@ -788,9 +800,9 @@ impl GltfBuilder {
         let mut indices = Vec::new();
         for i in 0..indices_raw.len() / 3 {
             indices.push(Triangle {
-                a: indices_raw[i * 3],
-                b: indices_raw[i * 3 + 1],
-                c: indices_raw[i * 3 + 2]
+                a: indices_raw[i * 3] as u32,
+                b: indices_raw[i * 3 + 1] as u32,
+                c: indices_raw[i * 3 + 2] as u32
             });
         }
         
@@ -854,9 +866,9 @@ impl GltfBuilder {
         let mut indices = Vec::new();
         for i in 0..indices_raw.len() / 3 {
             indices.push(Triangle {
-                a: indices_raw[i * 3],
-                b: indices_raw[i * 3 + 1],
-                c: indices_raw[i * 3 + 2]
+                a: indices_raw[i * 3] as u32,
+                b: indices_raw[i * 3 + 1] as u32,
+                c: indices_raw[i * 3 + 2] as u32
             });
         }
         
@@ -912,9 +924,9 @@ impl GltfBuilder {
         let mut indices = Vec::new();
         for i in 0..indices_raw.len() / 3 {
             indices.push(Triangle {
-                a: indices_raw[i * 3],
-                b: indices_raw[i * 3 + 1],
-                c: indices_raw[i * 3 + 2]
+                a: indices_raw[i * 3] as u32,
+                b: indices_raw[i * 3 + 1] as u32,
+                c: indices_raw[i * 3 + 2] as u32
             });
         }
         

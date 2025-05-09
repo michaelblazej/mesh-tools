@@ -74,8 +74,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     
     let quad_indices = vec![
         // Two triangles forming a quad
-        Triangle { a: 0, b: 1, c: 2 },  // Triangle 1
-        Triangle { a: 0, b: 2, c: 3 }   // Triangle 2
+        Triangle::new(0, 1, 2),  // Triangle 1
+        Triangle::new(0, 2, 3)   // Triangle 2
     ];
     
     let quad_normals = vec![
