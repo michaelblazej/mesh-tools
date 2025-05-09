@@ -22,7 +22,7 @@ use nalgebra::{Point3, Vector2, Vector3};
 
 /// A triangle represented by three vertex indices
 ///
-/// Uses u32 indices to support meshes with more than 65,535 vertices.
+/// Uses u32 indices.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Triangle {
     /// First vertex index
@@ -35,6 +35,14 @@ pub struct Triangle {
 
 impl Triangle {
     /// Create a new triangle with the given vertex indices
+    ///
+    /// # Arguments
+    /// * `a` - First vertex index
+    /// * `b` - Second vertex index
+    /// * `c` - Third vertex index
+    ///
+    /// # Returns
+    /// A new Triangle instance
     pub fn new(a: u32, b: u32, c: u32) -> Self {
         Self { a, b, c }
     }
@@ -472,7 +480,7 @@ impl GltfBuilder {
     /// # Parameters
     /// * `name` - Optional name for the mesh
     /// * `positions` - Vertex positions as &[Point3<f32>]
-    /// * `indices` - List of triangles, each containing three vertex indices
+    /// * `indices` - List of triangles using the Triangle struct
     /// * `normals` - Optional vertex normals as Vec<Vector3<f32>>
     /// * `texcoords` - Optional UV coordinates as Vec<Vector2<f32>>
     /// * `material` - Optional material index to use for the mesh
@@ -948,8 +956,6 @@ impl GltfBuilder {
                 uvs_raw[i * 2 + 1]
             ));
         }
-        
-        // Now convert back to flat arrays for create_simple_mesh
         
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
