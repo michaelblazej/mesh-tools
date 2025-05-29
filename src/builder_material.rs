@@ -3,7 +3,7 @@ use crate::material;
 
 impl GltfBuilder {
     /// Add a material to the glTF document
-    pub fn add_material(&mut self, name: Option<String>, 
+    pub(crate) fn add_material(&mut self, name: Option<String>, 
                         base_color: Option<[f32; 4]>,
                         metallic_factor: Option<f32>,
                         roughness_factor: Option<f32>,

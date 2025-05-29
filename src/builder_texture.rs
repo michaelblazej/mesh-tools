@@ -66,7 +66,7 @@ impl GltfBuilder {
     }
     
     /// Add an image to the glTF document from a DynamicImage using the specified format
-    pub fn add_image_from_dynamic_image(&mut self, name: Option<String>, 
+    pub(crate) fn add_image_from_dynamic_image(&mut self, name: Option<String>, 
                                        image: &DynamicImage, 
                                        format: texture::TextureFormat) -> Result<usize> {
         let bytes = texture::image_to_bytes(image, format)?;
@@ -124,7 +124,7 @@ impl GltfBuilder {
     }
     
     /// Add a sampler to the glTF document
-    pub fn add_sampler(&mut self, mag_filter: Option<usize>, min_filter: Option<usize>,
+    pub(crate) fn add_sampler(&mut self, mag_filter: Option<usize>, min_filter: Option<usize>,
                       wrap_s: Option<usize>, wrap_t: Option<usize>) -> usize {
         let sampler = Sampler {
             mag_filter: mag_filter,
@@ -144,7 +144,7 @@ impl GltfBuilder {
     }
     
     /// Add an image to the glTF document
-    pub fn add_image_from_buffer(&mut self, name: Option<String>, 
+    pub(crate) fn add_image_from_buffer(&mut self, name: Option<String>, 
                                mime_type: String, data: &[u8]) -> usize {
         // Add image data to buffer
         let (offset, length) = self.add_buffer_data(data);
@@ -171,7 +171,7 @@ impl GltfBuilder {
     }
     
     /// Add a texture to the glTF document
-    pub fn add_texture(&mut self, name: Option<String>, source: usize, 
+    pub(crate) fn add_texture(&mut self, name: Option<String>, source: usize, 
                       sampler: Option<usize>) -> usize {
         let texture = Texture {
             name,

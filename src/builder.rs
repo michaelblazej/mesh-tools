@@ -197,7 +197,7 @@ impl GltfBuilder {
     }
     
     /// Add an accessor to the glTF document
-    pub fn add_accessor(&mut self, buffer_view: usize, component_type: usize, 
+    pub(crate) fn add_accessor(&mut self, buffer_view: usize, component_type: usize, 
                        count: usize, type_: String, byte_offset: Option<usize>,
                        min: Option<Vec<f32>>, max: Option<Vec<f32>>) -> usize {
         let accessor = Accessor {
@@ -222,7 +222,7 @@ impl GltfBuilder {
     }
     
     /// Add a buffer view to the glTF document
-    pub fn add_buffer_view(&mut self, byte_offset: usize, byte_length: usize, 
+    pub(crate) fn add_buffer_view(&mut self, byte_offset: usize, byte_length: usize, 
                           target: Option<usize>) -> usize {
         let buffer_view = BufferView {
             buffer: 0, // We only use a single buffer
@@ -243,7 +243,7 @@ impl GltfBuilder {
     }
     
     /// Add binary data to the buffer and return the byte offset
-    pub fn add_buffer_data(&mut self, data: &[u8]) -> (usize, usize) {
+    pub(crate) fn add_buffer_data(&mut self, data: &[u8]) -> (usize, usize) {
         // Ensure alignment to 4-byte boundary
         while self.buffer_data.len() % 4 != 0 {
             self.buffer_data.push(0);
