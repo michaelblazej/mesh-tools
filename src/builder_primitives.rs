@@ -346,7 +346,7 @@ impl GltfBuilder {
         let min = min_point.map(|p| vec![p.x, p.y, p.z]);
         let max = max_point.map(|p| vec![p.x, p.y, p.z]);
         
-        // Convert positions from nalgebra Point3 to flat array for buffer
+        // Convert positions from Point3 to flat array for buffer
         let flat_positions: Vec<f32> = positions.iter().flat_map(|p| vec![p.x, p.y, p.z]).collect();
         
         // Add position data to buffer
@@ -472,7 +472,7 @@ impl GltfBuilder {
     }
     
     
-    /// Create a mesh with custom geometry and single UV channel using nalgebra types
+    /// Create a mesh with custom geometry and single UV channel using types
     /// 
     /// Simplified version of create_custom_mesh for the common case of a single UV channel,
     /// but using proper 3D math types instead of raw float arrays.
@@ -542,12 +542,12 @@ impl GltfBuilder {
                       width_segments: usize, 
                       depth_segments: usize,
                       material: Option<usize>) -> usize {
-        // Get the mesh data directly as nalgebra types
+        // Get the mesh data directly as types
         let (positions, indices, normals, uvs) = primitives::generate_plane(
             width, depth, width_segments, depth_segments
         );
         
-        // Create the mesh using the nalgebra types returned by the primitives module
+        // Create the mesh using the mint types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
@@ -584,12 +584,12 @@ impl GltfBuilder {
                        width_segments: usize, 
                        height_segments: usize,
                        material: Option<usize>) -> usize {
-        // Get the mesh data directly as nalgebra types
+        // Get the mesh data directly as mint types
         let (positions, indices, normals, uvs) = primitives::generate_sphere(
             radius, width_segments, height_segments
         );
         
-        // Create the mesh using the nalgebra types returned by the primitives module
+        // Create the mesh using the mint types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
@@ -641,12 +641,12 @@ impl GltfBuilder {
                          height_segments: usize,
                          open_ended: bool,
                          material: Option<usize>) -> usize {
-        // Get the mesh data directly as nalgebra types
+        // Get the mesh data directly as types
         let (positions, indices, normals, uvs) = primitives::generate_cylinder(
             radius_top, radius_bottom, height, radial_segments, height_segments, open_ended
         );
         
-        // Create the mesh using the nalgebra types returned by the primitives module
+        // Create the mesh using the types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
@@ -669,12 +669,12 @@ impl GltfBuilder {
                       height_segments: usize,
                       open_ended: bool,
                       material: Option<usize>) -> usize {
-        // Get the mesh data directly as nalgebra types
+        // Get the mesh data directly as types
         let (positions, indices, normals, uvs) = primitives::generate_cone(
             radius, height, radial_segments, height_segments, open_ended
         );
         
-        // Create the mesh using the nalgebra types returned by the primitives module
+        // Create the mesh using the types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
@@ -695,12 +695,12 @@ impl GltfBuilder {
                        radial_segments: usize, 
                        tubular_segments: usize,
                        material: Option<usize>) -> usize {
-        // Get the mesh data directly as nalgebra types
+        // Get the mesh data directly as types
         let (positions, indices, normals, uvs) = primitives::generate_torus(
             radius, tube, radial_segments, tubular_segments
         );
         
-        // Create the mesh using the nalgebra types returned by the primitives module
+        // Create the mesh using the types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
     
@@ -715,10 +715,10 @@ impl GltfBuilder {
     pub fn create_icosahedron(&mut self, 
                             radius: f32,
                             material: Option<usize>) -> usize {
-        // Get the mesh data directly as nalgebra types
+        // Get the mesh data directly as types
         let (positions, indices, normals, uvs) = primitives::generate_icosahedron(radius);
         
-        // Create the mesh using the nalgebra types returned by the primitives module
+        // Create the mesh using the types returned by the primitives module
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
     }
 }

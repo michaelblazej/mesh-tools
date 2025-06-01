@@ -13,6 +13,25 @@
 //! - Support for textures and image data
 //! - Create complex hierarchical scenes with node parent-child relationships
 //! - Export models in both glTF (JSON+binary) and GLB (single binary) formats
+//! - Lightweight math types via the mint crate
+//!
+//! ## Math Types
+//!
+//! This library uses the lightweight [mint](https://crates.io/crates/mint) crate for mathematical types.
+//! A compatibility layer is provided in the `compat` module to make working with these types easy:
+//!
+//! ```rust
+//! use mesh_tools::compat::{Point3, Vector2, Vector3};
+//!
+//! // Use constructor functions
+//! let position = mesh_tools::compat::point3::new(1.0, 2.0, 3.0);
+//! let normal = mesh_tools::compat::vector3::new(0.0, 1.0, 0.0);
+//! 
+//! // Vector operations
+//! let a = mesh_tools::compat::vector3::new(1.0, 0.0, 0.0);
+//! let b = mesh_tools::compat::vector3::new(0.0, 1.0, 0.0);
+//! let cross_product = mesh_tools::compat::cross(a, b);
+//! ```
 //!
 //! ## Basic Usage
 //!

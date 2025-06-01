@@ -10,6 +10,7 @@ A Rust library for creating, manipulating, and exporting 3D meshes with support 
 - Scene hierarchy and node transformation support
 - Export to binary GLB format with Blender compatibility
 - Comprehensive vertex attribute handling (positions, normals, UVs, tangents, colors)
+- Lightweight math types via mint instead of nalgebra
 
 ## Primitive Shapes
 
@@ -96,6 +97,31 @@ The library provides GLB (binary glTF) export functionality that is compatible w
 - Proper handling of chunk types and alignment
 - Binary data padding and structure according to glTF spec
 - Support for all vertex attributes (positions, normals, UVs, etc.)
+
+## Math Types and Compatibility Layer
+
+This library uses the lightweight [mint](https://crates.io/crates/mint) crate for mathematical types like `Point3`, `Vector2`, and `Vector3`. A compatibility layer is provided to make working with these types easy:
+
+```rust
+// Import math types from the compatibility module
+use mesh_tools::compat::{Point3, Vector2, Vector3};
+
+// Use constructor functions
+let position = mesh_tools::compat::point3::new(1.0, 2.0, 3.0);
+let normal = mesh_tools::compat::vector3::new(0.0, 1.0, 0.0);
+let uv = mesh_tools::compat::vector2::new(0.5, 0.5);
+
+// Alternatively, use re-exported functions at the module level
+use mesh_tools::compat::{point3_new, vector3_new};
+let position = point3_new(1.0, 2.0, 3.0);
+
+// Vector operations are also available
+use mesh_tools::compat::{cross, normalize, dot};
+let cross_product = cross(vec1, vec2);
+let unit_normal = normalize(normal);
+```
+
+You don't need to add mint as a direct dependency - the library re-exports all necessary types.
 
 ## Building and Running
 

@@ -1,8 +1,36 @@
-//! Compatibility layer for math types
+//! # Compatibility layer for math types
 //!
-//! This module re-exports mint types and provides constructor functions 
-//! to maintain compatibility with the previous nalgebra-based API.
-//! Users can directly use these types without adding mint as a dependency.
+//! This module re-exports types from the `mint` crate and provides constructor functions 
+//! to maintain compatibility with the previous nalgebra-based API. Users can directly 
+//! use these types without adding mint as a direct dependency.
+//!
+//! ## Usage
+//!
+//! ```rust
+//! use mesh_tools::compat::{Point3, Vector2, Vector3};
+//! 
+//! // Creating points and vectors
+//! let position = mesh_tools::compat::point3::new(1.0, 2.0, 3.0);
+//! let uv = mesh_tools::compat::vector2::new(0.5, 0.5);
+//! let normal = mesh_tools::compat::vector3::new(0.0, 1.0, 0.0);
+//! 
+//! // Accessing components directly
+//! let x = position.x;
+//! let y = position.y;
+//! let z = position.z;
+//! 
+//! // Using the module-level functions
+//! use mesh_tools::compat::{point3_new, vector2_new, vector3_new};
+//! let position = point3_new(1.0, 2.0, 3.0);
+//! 
+//! // Vector operations
+//! use mesh_tools::compat::{cross, normalize, dot};
+//! let a = vector3_new(1.0, 0.0, 0.0);
+//! let b = vector3_new(0.0, 1.0, 0.0);
+//! let cross_product = cross(a, b);
+//! let unit_vector = normalize(cross_product);
+//! let dot_product = dot(a, b);
+//! ```
 
 // Re-export mint types directly
 pub use mint::{Point3, Vector2, Vector3};
