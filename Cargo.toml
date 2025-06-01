@@ -1,13 +1,13 @@
 [package]
 name = "mesh-tools"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Michael Blazej"]
 description = "A Rust library for generating 3D meshes and exporting them to glTF/GLB files"
 license = "MIT"
 repository = "https://github.com/michaelblazej/mesh-tools"
 homepage = "https://github.com/michaelblazej/mesh-tools"
-documentation = "https://docs.rs/mesh-tools/0.2.0/mesh_tools/"
+documentation = "https://docs.rs/mesh-tools/0.3.0/mesh_tools/"
 keywords = ["gltf", "3d", "mesh", "export", "graphics"]
 categories = ["graphics", "rendering", "game-development", "simulation"]
 include = ["src/**/*.rs", "Cargo.toml", "LICENSE"]
@@ -23,7 +23,7 @@ base64 = "0.13"
 thiserror = "1.0"
 # For generating UUIDs
 uuid = { version = "1.0", features = ["v4"] }
-# For handling matrix and vector operations
+# For handling basic data types
 mint = "0.5.9"
 # For image processing and texture generation
 image = "0.24"
