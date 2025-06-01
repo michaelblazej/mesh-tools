@@ -1,6 +1,6 @@
 use mesh_tools::GltfBuilder;
 use mesh_tools::Triangle;
-use nalgebra::{Point3, Vector2, Vector3};
+use mesh_tools::compat::{Point3, Vector2, Vector3};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -30,9 +30,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Define a simple triangle mesh with custom UV mapping using nalgebra types
     let positions = vec![
         // Position data for 3 vertices (triangle)
-        Point3::new(-1.0, -1.0, 0.0),  // Vertex 0: bottom-left
-        Point3::new( 1.0, -1.0, 0.0),  // Vertex 1: bottom-right
-        Point3::new( 0.0,  1.0, 0.0),  // Vertex 2: top-center
+        mesh_tools::compat::point3::new(-1.0, -1.0, 0.0),  // Vertex 0: bottom-left
+        mesh_tools::compat::point3::new( 1.0, -1.0, 0.0),  // Vertex 1: bottom-right
+        mesh_tools::compat::point3::new( 0.0,  1.0, 0.0),  // Vertex 2: top-center
     ];
     
     let indices = vec![
@@ -41,16 +41,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     
     let normals = vec![
         // Normal data for 3 vertices (all facing forward)
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(0.0, 0.0, 1.0),
+        mesh_tools::compat::vector3::new(0.0, 0.0, 1.0),
+        mesh_tools::compat::vector3::new(0.0, 0.0, 1.0),
+        mesh_tools::compat::vector3::new(0.0, 0.0, 1.0),
     ];
     
     let texcoords = vec![
         // UV data for 3 vertices
-        Vector2::new(0.0, 1.0),  // Vertex 0: bottom-left
-        Vector2::new(1.0, 1.0),  // Vertex 1: bottom-right
-        Vector2::new(0.5, 0.0),  // Vertex 2: top-center
+        mesh_tools::compat::vector2::new(0.0, 1.0),  // Vertex 0: bottom-left
+        mesh_tools::compat::vector2::new(1.0, 1.0),  // Vertex 1: bottom-right
+        mesh_tools::compat::vector2::new(0.5, 0.0),  // Vertex 2: top-center
     ];
     
     // Create the custom triangle mesh using create_simple_mesh_3d (single UV channel with nalgebra types)
@@ -66,10 +66,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Define a quad mesh with multiple UV channels using nalgebra types
     let quad_positions = vec![
         // Position data for 4 vertices (quad)
-        Point3::new(-1.0, -1.0, 0.0),  // Vertex 0: bottom-left
-        Point3::new( 1.0, -1.0, 0.0),  // Vertex 1: bottom-right
-        Point3::new( 1.0,  1.0, 0.0),  // Vertex 2: top-right
-        Point3::new(-1.0,  1.0, 0.0),  // Vertex 3: top-left
+        mesh_tools::compat::point3::new(-1.0, -1.0, 0.0),  // Vertex 0: bottom-left
+        mesh_tools::compat::point3::new( 1.0, -1.0, 0.0),  // Vertex 1: bottom-right
+        mesh_tools::compat::point3::new( 1.0,  1.0, 0.0),  // Vertex 2: top-right
+        mesh_tools::compat::point3::new(-1.0,  1.0, 0.0),  // Vertex 3: top-left
     ];
     
     let quad_indices = vec![
@@ -80,28 +80,28 @@ fn main() -> Result<(), Box<dyn Error>> {
     
     let quad_normals = vec![
         // Normal data for 4 vertices (all facing forward)
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(0.0, 0.0, 1.0),
+        mesh_tools::compat::vector3::new(0.0, 0.0, 1.0),
+        mesh_tools::compat::vector3::new(0.0, 0.0, 1.0),
+        mesh_tools::compat::vector3::new(0.0, 0.0, 1.0),
+        mesh_tools::compat::vector3::new(0.0, 0.0, 1.0),
     ];
     
     // Primary UV channel (TEXCOORD_0) - standard mapping
     let quad_texcoords_0 = vec![
         // Standard UV mapping (full texture)
-        Vector2::new(0.0, 1.0),  // Vertex 0: bottom-left
-        Vector2::new(1.0, 1.0),  // Vertex 1: bottom-right
-        Vector2::new(1.0, 0.0),  // Vertex 2: top-right
-        Vector2::new(0.0, 0.0),  // Vertex 3: top-left
+        mesh_tools::compat::vector2::new(0.0, 1.0),  // Vertex 0: bottom-left
+        mesh_tools::compat::vector2::new(1.0, 1.0),  // Vertex 1: bottom-right
+        mesh_tools::compat::vector2::new(1.0, 0.0),  // Vertex 2: top-right
+        mesh_tools::compat::vector2::new(0.0, 0.0),  // Vertex 3: top-left
     ];
     
     // Secondary UV channel (TEXCOORD_1) - tiled mapping
     let quad_texcoords_1 = vec![
         // Tiled UV mapping (repeated texture)
-        Vector2::new(0.0, 2.0),  // Vertex 0: bottom-left
-        Vector2::new(2.0, 2.0),  // Vertex 1: bottom-right
-        Vector2::new(2.0, 0.0),  // Vertex 2: top-right
-        Vector2::new(0.0, 0.0),  // Vertex 3: top-left
+        mesh_tools::compat::vector2::new(0.0, 2.0),  // Vertex 0: bottom-left
+        mesh_tools::compat::vector2::new(2.0, 2.0),  // Vertex 1: bottom-right
+        mesh_tools::compat::vector2::new(2.0, 0.0),  // Vertex 2: top-right
+        mesh_tools::compat::vector2::new(0.0, 0.0),  // Vertex 3: top-left
     ];
     
     // Create a textured material that uses the second UV set
@@ -133,40 +133,40 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create a cube with fully custom UV mapping for each face using nalgebra types
     let cube_positions = vec![
         // Front face - 4 vertices
-        Point3::new(-1.0, -1.0,  1.0),  // 0: bottom-left
-        Point3::new( 1.0, -1.0,  1.0),  // 1: bottom-right
-        Point3::new( 1.0,  1.0,  1.0),  // 2: top-right
-        Point3::new(-1.0,  1.0,  1.0),  // 3: top-left
+        mesh_tools::compat::point3::new(-1.0, -1.0,  1.0),  // 0: bottom-left
+        mesh_tools::compat::point3::new( 1.0, -1.0,  1.0),  // 1: bottom-right
+        mesh_tools::compat::point3::new( 1.0,  1.0,  1.0),  // 2: top-right
+        mesh_tools::compat::point3::new(-1.0,  1.0,  1.0),  // 3: top-left
         
         // Back face - 4 vertices
-        Point3::new( 1.0, -1.0, -1.0),  // 4: bottom-left
-        Point3::new(-1.0, -1.0, -1.0),  // 5: bottom-right
-        Point3::new(-1.0,  1.0, -1.0),  // 6: top-right
-        Point3::new( 1.0,  1.0, -1.0),  // 7: top-left
+        mesh_tools::compat::point3::new( 1.0, -1.0, -1.0),  // 4: bottom-left
+        mesh_tools::compat::point3::new(-1.0, -1.0, -1.0),  // 5: bottom-right
+        mesh_tools::compat::point3::new(-1.0,  1.0, -1.0),  // 6: top-right
+        mesh_tools::compat::point3::new( 1.0,  1.0, -1.0),  // 7: top-left
         
         // Top face - 4 vertices
-        Point3::new(-1.0,  1.0,  1.0),  // 8: back-left
-        Point3::new( 1.0,  1.0,  1.0),  // 9: back-right
-        Point3::new( 1.0,  1.0, -1.0),  // 10: front-right
-        Point3::new(-1.0,  1.0, -1.0),  // 11: front-left
+        mesh_tools::compat::point3::new(-1.0,  1.0,  1.0),  // 8: back-left
+        mesh_tools::compat::point3::new( 1.0,  1.0,  1.0),  // 9: back-right
+        mesh_tools::compat::point3::new( 1.0,  1.0, -1.0),  // 10: front-right
+        mesh_tools::compat::point3::new(-1.0,  1.0, -1.0),  // 11: front-left
         
         // Bottom face - 4 vertices
-        Point3::new( 1.0, -1.0,  1.0),  // 12: back-left
-        Point3::new(-1.0, -1.0,  1.0),  // 13: back-right
-        Point3::new(-1.0, -1.0, -1.0),  // 14: front-right
-        Point3::new( 1.0, -1.0, -1.0),  // 15: front-left
+        mesh_tools::compat::point3::new( 1.0, -1.0,  1.0),  // 12: back-left
+        mesh_tools::compat::point3::new(-1.0, -1.0,  1.0),  // 13: back-right
+        mesh_tools::compat::point3::new(-1.0, -1.0, -1.0),  // 14: front-right
+        mesh_tools::compat::point3::new( 1.0, -1.0, -1.0),  // 15: front-left
         
         // Right face - 4 vertices
-        Point3::new( 1.0, -1.0,  1.0),  // 16: bottom-front
-        Point3::new( 1.0, -1.0, -1.0),  // 17: bottom-back
-        Point3::new( 1.0,  1.0, -1.0),  // 18: top-back
-        Point3::new( 1.0,  1.0,  1.0),  // 19: top-front
+        mesh_tools::compat::point3::new( 1.0, -1.0,  1.0),  // 16: bottom-front
+        mesh_tools::compat::point3::new( 1.0, -1.0, -1.0),  // 17: bottom-back
+        mesh_tools::compat::point3::new( 1.0,  1.0, -1.0),  // 18: top-back
+        mesh_tools::compat::point3::new( 1.0,  1.0,  1.0),  // 19: top-front
         
         // Left face - 4 vertices
-        Point3::new(-1.0, -1.0, -1.0),  // 20: bottom-back
-        Point3::new(-1.0, -1.0,  1.0),  // 21: bottom-front
-        Point3::new(-1.0,  1.0,  1.0),  // 22: top-front
-        Point3::new(-1.0,  1.0, -1.0),  // 23: top-back
+        mesh_tools::compat::point3::new(-1.0, -1.0, -1.0),  // 20: bottom-back
+        mesh_tools::compat::point3::new(-1.0, -1.0,  1.0),  // 21: bottom-front
+        mesh_tools::compat::point3::new(-1.0,  1.0,  1.0),  // 22: top-front
+        mesh_tools::compat::point3::new(-1.0,  1.0, -1.0),  // 23: top-back
     ];
     
     let cube_indices = vec![
@@ -198,40 +198,40 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Custom UV mapping where each face has a unique pattern
     let cube_texcoords = vec![
         // Front face - standard UVs
-        Vector2::new(0.0, 1.0), 
-        Vector2::new(1.0, 1.0), 
-        Vector2::new(1.0, 0.0), 
-        Vector2::new(0.0, 0.0),
+        mesh_tools::compat::vector2::new(0.0, 1.0), 
+        mesh_tools::compat::vector2::new(1.0, 1.0), 
+        mesh_tools::compat::vector2::new(1.0, 0.0), 
+        mesh_tools::compat::vector2::new(0.0, 0.0),
 
         // Back face - flipped horizontally
-        Vector2::new(1.0, 1.0), 
-        Vector2::new(1.0, 0.0), 
-        Vector2::new(0.0, 0.0), 
-        Vector2::new(0.0, 1.0),
+        mesh_tools::compat::vector2::new(1.0, 1.0), 
+        mesh_tools::compat::vector2::new(1.0, 0.0), 
+        mesh_tools::compat::vector2::new(0.0, 0.0), 
+        mesh_tools::compat::vector2::new(0.0, 1.0),
 
         // Top face - rotated 90 degrees
-        Vector2::new(0.0, 1.0), 
-        Vector2::new(0.0, 0.0), 
-        Vector2::new(1.0, 0.0), 
-        Vector2::new(1.0, 1.0),
+        mesh_tools::compat::vector2::new(0.0, 1.0), 
+        mesh_tools::compat::vector2::new(0.0, 0.0), 
+        mesh_tools::compat::vector2::new(1.0, 0.0), 
+        mesh_tools::compat::vector2::new(1.0, 1.0),
         
         // Bottom face - centered smaller square
-        Vector2::new(1.0, 1.0), 
-        Vector2::new(0.0, 1.0), 
-        Vector2::new(0.0, 0.0), 
-        Vector2::new(1.0, 0.0),
+        mesh_tools::compat::vector2::new(1.0, 1.0), 
+        mesh_tools::compat::vector2::new(0.0, 1.0), 
+        mesh_tools::compat::vector2::new(0.0, 0.0), 
+        mesh_tools::compat::vector2::new(1.0, 0.0),
         
         // Right face
-        Vector2::new(1.0, 1.0), 
-        Vector2::new(1.0, 0.0), 
-        Vector2::new(0.0, 0.0), 
-        Vector2::new(0.0, 1.0),
+        mesh_tools::compat::vector2::new(1.0, 1.0), 
+        mesh_tools::compat::vector2::new(1.0, 0.0), 
+        mesh_tools::compat::vector2::new(0.0, 0.0), 
+        mesh_tools::compat::vector2::new(0.0, 1.0),
         
         // Left face - showing just top-right quadrant
-        Vector2::new(0.0, 1.0), 
-        Vector2::new(1.0, 1.0), 
-        Vector2::new(1.0, 0.0), 
-        Vector2::new(0.0, 0.0)
+        mesh_tools::compat::vector2::new(0.0, 1.0), 
+        mesh_tools::compat::vector2::new(1.0, 1.0), 
+        mesh_tools::compat::vector2::new(1.0, 0.0), 
+        mesh_tools::compat::vector2::new(0.0, 0.0)
     ];
     
     // Create the custom cube mesh

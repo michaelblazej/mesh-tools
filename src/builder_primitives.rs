@@ -18,7 +18,7 @@ use crate::constants::{accessor_type, buffer_view_target, component_type};
 use crate::models::Primitive;
 use crate::primitives;
 use std::collections::HashMap;
-use nalgebra::{Point3, Vector2, Vector3};
+use crate::compat::{Point3, Vector2, Vector3};
 
 /// A triangle represented by three vertex indices
 ///
@@ -73,16 +73,16 @@ impl GltfBuilder {
         // 8 vertices for a cube (8 corners) using Point3
         let positions = vec![
             // Front face (z+)
-            Point3::new(-half_size, -half_size,  half_size),  // 0: bottom-left-front
-            Point3::new( half_size, -half_size,  half_size),  // 1: bottom-right-front
-            Point3::new( half_size,  half_size,  half_size),  // 2: top-right-front
-            Point3::new(-half_size,  half_size,  half_size),  // 3: top-left-front
+            crate::compat::point3::new(-half_size, -half_size,  half_size),  // 0: bottom-left-front
+            crate::compat::point3::new( half_size, -half_size,  half_size),  // 1: bottom-right-front
+            crate::compat::point3::new( half_size,  half_size,  half_size),  // 2: top-right-front
+            crate::compat::point3::new(-half_size,  half_size,  half_size),  // 3: top-left-front
             
             // Back face (z-)
-            Point3::new(-half_size, -half_size, -half_size),  // 4: bottom-left-back
-            Point3::new( half_size, -half_size, -half_size),  // 5: bottom-right-back
-            Point3::new( half_size,  half_size, -half_size),  // 6: top-right-back
-            Point3::new(-half_size,  half_size, -half_size),  // 7: top-left-back
+            crate::compat::point3::new(-half_size, -half_size, -half_size),  // 4: bottom-left-back
+            crate::compat::point3::new( half_size, -half_size, -half_size),  // 5: bottom-right-back
+            crate::compat::point3::new( half_size,  half_size, -half_size),  // 6: top-right-back
+            crate::compat::point3::new(-half_size,  half_size, -half_size),  // 7: top-left-back
         ];
         
         // 12 triangles (2 per face * 6 faces) using Triangle structs
@@ -109,16 +109,16 @@ impl GltfBuilder {
         // Normals for each vertex using Vector3
         let normals = vec![
             // Front face (z+)
-            Vector3::new(0.0, 0.0, 1.0),
-            Vector3::new(0.0, 0.0, 1.0),
-            Vector3::new(0.0, 0.0, 1.0),
-            Vector3::new(0.0, 0.0, 1.0),
+            crate::compat::vector3::new(0.0, 0.0, 1.0),
+            crate::compat::vector3::new(0.0, 0.0, 1.0),
+            crate::compat::vector3::new(0.0, 0.0, 1.0),
+            crate::compat::vector3::new(0.0, 0.0, 1.0),
             
             // Back face (z-)
-            Vector3::new(0.0, 0.0, -1.0),
-            Vector3::new(0.0, 0.0, -1.0),
-            Vector3::new(0.0, 0.0, -1.0),
-            Vector3::new(0.0, 0.0, -1.0),
+            crate::compat::vector3::new(0.0, 0.0, -1.0),
+            crate::compat::vector3::new(0.0, 0.0, -1.0),
+            crate::compat::vector3::new(0.0, 0.0, -1.0),
+            crate::compat::vector3::new(0.0, 0.0, -1.0),
             
             // This is simplified for example purposes
             // In a real implementation we would need more vertices with unique normals
@@ -128,16 +128,16 @@ impl GltfBuilder {
         // Simple UV mapping using Vector2
         let uvs = vec![
             // Front face
-            Vector2::new(0.0, 1.0),
-            Vector2::new(1.0, 1.0),
-            Vector2::new(1.0, 0.0),
-            Vector2::new(0.0, 0.0),
+            crate::compat::vector2::new(0.0, 1.0),
+            crate::compat::vector2::new(1.0, 1.0),
+            crate::compat::vector2::new(1.0, 0.0),
+            crate::compat::vector2::new(0.0, 0.0),
             
             // Back face
-            Vector2::new(1.0, 1.0),
-            Vector2::new(0.0, 1.0),
-            Vector2::new(0.0, 0.0),
-            Vector2::new(1.0, 0.0),
+            crate::compat::vector2::new(1.0, 1.0),
+            crate::compat::vector2::new(0.0, 1.0),
+            crate::compat::vector2::new(0.0, 0.0),
+            crate::compat::vector2::new(1.0, 0.0),
         ];
         
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), None)
@@ -152,40 +152,40 @@ impl GltfBuilder {
         // 24 vertices for a cube (4 per face * 6 faces) using Point3
         let positions = vec![
             // Front face (z+)
-            Point3::new(-half_size, -half_size,  half_size),
-            Point3::new( half_size, -half_size,  half_size),
-            Point3::new( half_size,  half_size,  half_size),
-            Point3::new(-half_size,  half_size,  half_size),
+            crate::compat::point3::new(-half_size, -half_size,  half_size),
+            crate::compat::point3::new( half_size, -half_size,  half_size),
+            crate::compat::point3::new( half_size,  half_size,  half_size),
+            crate::compat::point3::new(-half_size,  half_size,  half_size),
             
             // Back face (z-)
-            Point3::new( half_size, -half_size, -half_size),
-            Point3::new(-half_size, -half_size, -half_size),
-            Point3::new(-half_size,  half_size, -half_size),
-            Point3::new( half_size,  half_size, -half_size),
+            crate::compat::point3::new( half_size, -half_size, -half_size),
+            crate::compat::point3::new(-half_size, -half_size, -half_size),
+            crate::compat::point3::new(-half_size,  half_size, -half_size),
+            crate::compat::point3::new( half_size,  half_size, -half_size),
             
             // Top face (y+)
-            Point3::new(-half_size,  half_size,  half_size),
-            Point3::new( half_size,  half_size,  half_size),
-            Point3::new( half_size,  half_size, -half_size),
-            Point3::new(-half_size,  half_size, -half_size),
+            crate::compat::point3::new(-half_size,  half_size,  half_size),
+            crate::compat::point3::new( half_size,  half_size,  half_size),
+            crate::compat::point3::new( half_size,  half_size, -half_size),
+            crate::compat::point3::new(-half_size,  half_size, -half_size),
             
             // Bottom face (y-)
-            Point3::new( half_size, -half_size,  half_size),
-            Point3::new(-half_size, -half_size,  half_size),
-            Point3::new(-half_size, -half_size, -half_size),
-            Point3::new( half_size, -half_size, -half_size),
+            crate::compat::point3::new( half_size, -half_size,  half_size),
+            crate::compat::point3::new(-half_size, -half_size,  half_size),
+            crate::compat::point3::new(-half_size, -half_size, -half_size),
+            crate::compat::point3::new( half_size, -half_size, -half_size),
             
             // Right face (x+)
-            Point3::new( half_size, -half_size,  half_size),
-            Point3::new( half_size, -half_size, -half_size),
-            Point3::new( half_size,  half_size, -half_size),
-            Point3::new( half_size,  half_size,  half_size),
+            crate::compat::point3::new( half_size, -half_size,  half_size),
+            crate::compat::point3::new( half_size, -half_size, -half_size),
+            crate::compat::point3::new( half_size,  half_size, -half_size),
+            crate::compat::point3::new( half_size,  half_size,  half_size),
             
             // Left face (x-)
-            Point3::new(-half_size, -half_size, -half_size),
-            Point3::new(-half_size, -half_size,  half_size),
-            Point3::new(-half_size,  half_size,  half_size),
-            Point3::new(-half_size,  half_size, -half_size),
+            crate::compat::point3::new(-half_size, -half_size, -half_size),
+            crate::compat::point3::new(-half_size, -half_size,  half_size),
+            crate::compat::point3::new(-half_size,  half_size,  half_size),
+            crate::compat::point3::new(-half_size,  half_size, -half_size),
         ];
         
         // Convert positions to flat array for create_simple_mesh
@@ -222,40 +222,40 @@ impl GltfBuilder {
         // Normals for each vertex
         let normals = vec![
             // Front face (z+)
-            Vector3::new(0.0, 0.0, 1.0),
-            Vector3::new(0.0, 0.0, 1.0),
-            Vector3::new(0.0, 0.0, 1.0),
-            Vector3::new(0.0, 0.0, 1.0),
+            crate::compat::vector3::new(0.0, 0.0, 1.0),
+            crate::compat::vector3::new(0.0, 0.0, 1.0),
+            crate::compat::vector3::new(0.0, 0.0, 1.0),
+            crate::compat::vector3::new(0.0, 0.0, 1.0),
             
             // Back face (z-)
-            Vector3::new(0.0, 0.0, -1.0),
-            Vector3::new(0.0, 0.0, -1.0),
-            Vector3::new(0.0, 0.0, -1.0),
-            Vector3::new(0.0, 0.0, -1.0),
+            crate::compat::vector3::new(0.0, 0.0, -1.0),
+            crate::compat::vector3::new(0.0, 0.0, -1.0),
+            crate::compat::vector3::new(0.0, 0.0, -1.0),
+            crate::compat::vector3::new(0.0, 0.0, -1.0),
             
             // Top face (y+)
-            Vector3::new(0.0, 1.0, 0.0),
-            Vector3::new(0.0, 1.0, 0.0),
-            Vector3::new(0.0, 1.0, 0.0),
-            Vector3::new(0.0, 1.0, 0.0),
+            crate::compat::vector3::new(0.0, 1.0, 0.0),
+            crate::compat::vector3::new(0.0, 1.0, 0.0),
+            crate::compat::vector3::new(0.0, 1.0, 0.0),
+            crate::compat::vector3::new(0.0, 1.0, 0.0),
             
             // Bottom face (y-)
-            Vector3::new(0.0, -1.0, 0.0),
-            Vector3::new(0.0, -1.0, 0.0),
-            Vector3::new(0.0, -1.0, 0.0),
-            Vector3::new(0.0, -1.0, 0.0),
+            crate::compat::vector3::new(0.0, -1.0, 0.0),
+            crate::compat::vector3::new(0.0, -1.0, 0.0),
+            crate::compat::vector3::new(0.0, -1.0, 0.0),
+            crate::compat::vector3::new(0.0, -1.0, 0.0),
             
             // Right face (x+)
-            Vector3::new(1.0, 0.0, 0.0),
-            Vector3::new(1.0, 0.0, 0.0),
-            Vector3::new(1.0, 0.0, 0.0),
-            Vector3::new(1.0, 0.0, 0.0),
+            crate::compat::vector3::new(1.0, 0.0, 0.0),
+            crate::compat::vector3::new(1.0, 0.0, 0.0),
+            crate::compat::vector3::new(1.0, 0.0, 0.0),
+            crate::compat::vector3::new(1.0, 0.0, 0.0),
             
             // Left face (x-)
-            Vector3::new(-1.0, 0.0, 0.0),
-            Vector3::new(-1.0, 0.0, 0.0),
-            Vector3::new(-1.0, 0.0, 0.0),
-            Vector3::new(-1.0, 0.0, 0.0),
+            crate::compat::vector3::new(-1.0, 0.0, 0.0),
+            crate::compat::vector3::new(-1.0, 0.0, 0.0),
+            crate::compat::vector3::new(-1.0, 0.0, 0.0),
+            crate::compat::vector3::new(-1.0, 0.0, 0.0),
         ];
         
         // Convert normals to flat array for create_simple_mesh
@@ -263,40 +263,40 @@ impl GltfBuilder {
         // UVs for each face using Vector2
         let uvs = vec![
             // Front face
-            Vector2::new(0.0, 1.0),
-            Vector2::new(1.0, 1.0),
-            Vector2::new(1.0, 0.0),
-            Vector2::new(0.0, 0.0),
+            crate::compat::vector2::new(0.0, 1.0),
+            crate::compat::vector2::new(1.0, 1.0),
+            crate::compat::vector2::new(1.0, 0.0),
+            crate::compat::vector2::new(0.0, 0.0),
             
             // Back face
-            Vector2::new(1.0, 1.0),
-            Vector2::new(1.0, 0.0),
-            Vector2::new(0.0, 0.0),
-            Vector2::new(0.0, 1.0),
+            crate::compat::vector2::new(1.0, 1.0),
+            crate::compat::vector2::new(1.0, 0.0),
+            crate::compat::vector2::new(0.0, 0.0),
+            crate::compat::vector2::new(0.0, 1.0),
             
             // Top face
-            Vector2::new(0.0, 1.0),
-            Vector2::new(0.0, 0.0),
-            Vector2::new(1.0, 0.0),
-            Vector2::new(1.0, 1.0),
+            crate::compat::vector2::new(0.0, 1.0),
+            crate::compat::vector2::new(0.0, 0.0),
+            crate::compat::vector2::new(1.0, 0.0),
+            crate::compat::vector2::new(1.0, 1.0),
             
             // Bottom face
-            Vector2::new(1.0, 1.0),
-            Vector2::new(0.0, 1.0),
-            Vector2::new(0.0, 0.0),
-            Vector2::new(1.0, 0.0),
+            crate::compat::vector2::new(1.0, 1.0),
+            crate::compat::vector2::new(0.0, 1.0),
+            crate::compat::vector2::new(0.0, 0.0),
+            crate::compat::vector2::new(1.0, 0.0),
             
             // Right face
-            Vector2::new(1.0, 1.0),
-            Vector2::new(1.0, 0.0),
-            Vector2::new(0.0, 0.0),
-            Vector2::new(0.0, 1.0),
+            crate::compat::vector2::new(1.0, 1.0),
+            crate::compat::vector2::new(1.0, 0.0),
+            crate::compat::vector2::new(0.0, 0.0),
+            crate::compat::vector2::new(0.0, 1.0),
             
             // Left face
-            Vector2::new(0.0, 1.0),
-            Vector2::new(1.0, 1.0),
-            Vector2::new(1.0, 0.0),
-            Vector2::new(0.0, 0.0),
+            crate::compat::vector2::new(0.0, 1.0),
+            crate::compat::vector2::new(1.0, 1.0),
+            crate::compat::vector2::new(1.0, 0.0),
+            crate::compat::vector2::new(0.0, 0.0),
         ];
         
         self.create_simple_mesh(None, &positions, &indices, Some(normals), Some(uvs), material)
@@ -324,8 +324,8 @@ impl GltfBuilder {
                             material: Option<usize>) -> usize {
         // Calculate bounds for the positions
         let (min_point, max_point) = if !positions.is_empty() {
-            let mut min = Point3::new(f32::MAX, f32::MAX, f32::MAX);
-            let mut max = Point3::new(f32::MIN, f32::MIN, f32::MIN);
+            let mut min = crate::compat::point3::new(f32::MAX, f32::MAX, f32::MAX);
+            let mut max = crate::compat::point3::new(f32::MIN, f32::MIN, f32::MIN);
             
             for point in positions {
                 min.x = min.x.min(point.x);

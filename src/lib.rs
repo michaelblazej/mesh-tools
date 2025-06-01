@@ -49,6 +49,7 @@ pub mod primitives;  // Geometry generation primitives
 pub mod error;       // Error types and results
 pub mod models;      // glTF data model definitions
 pub mod constants;   // glTF format constants
+pub mod compat;      // Compatibility layer for mint math types
 pub mod material;    // Material creation and management
 pub mod mesh;        // Mesh creation and manipulation
 pub mod builder;     // Main GltfBuilder implementation

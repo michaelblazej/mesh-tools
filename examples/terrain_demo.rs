@@ -1,6 +1,15 @@
 use mesh_tools::{GltfBuilder, Triangle};
-use nalgebra::{Point3, Vector2, Vector3};
+use mesh_tools::compat::{Point3, Vector2, Vector3};
 use std::error::Error;
+
+// Helper function to calculate cross product for mint Vector3
+fn cross(a: Vector3<f32>, b: Vector3<f32>) -> Vector3<f32> {
+    mesh_tools::compat::vector3::new(
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+    )
+}
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a new glTF builder
@@ -108,10 +117,10 @@ fn generate_terrain_mesh(
             let y_pos = height_map[z * grid_width + x];
             
             // Add position using Point3
-            positions.push(Point3::new(x_pos, y_pos, z_pos));
+            positions.push(mesh_tools::compat::point3::new(x_pos, y_pos, z_pos));
             
             // Add UV coordinates using Vector2
-            texcoords.push(Vector2::new(u, v));
+            texcoords.push(mesh_tools::compat::vector2::new(u, v));
         }
     }
     
@@ -430,7 +439,7 @@ fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
 /// Calculate vertex normals based on triangle faces using nalgebra types
 fn calculate_normals(positions: &[Point3<f32>], indices: &[u16]) -> Vec<Vector3<f32>> {
     let vertex_count = positions.len();
-    let mut normals = vec![Vector3::new(0.0, 0.0, 0.0); vertex_count];
+    let mut normals = vec![mesh_tools::compat::vector3::new(0.0, 0.0, 0.0); vertex_count];
     
     // For each triangle
     for i in (0..indices.len()).step_by(3) {
@@ -444,22 +453,33 @@ fn calculate_normals(positions: &[Point3<f32>], indices: &[u16]) -> Vec<Vector3<
         let v3 = positions[i3];
         
         // Calculate vectors along two edges of the triangle
-        let edge1 = Vector3::new(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
-        let edge2 = Vector3::new(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
+        let edge1 = mesh_tools::compat::vector3::new(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
+        let edge2 = mesh_tools::compat::vector3::new(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
         
         // Calculate cross product to get face normal
-        let normal = edge1.cross(&edge2);
+        let normal = cross(edge1, edge2);
         
         // Accumulate the normal on each vertex of the triangle
-        normals[i1] += normal;
-        normals[i2] += normal;
-        normals[i3] += normal;
+        normals[i1].x += normal.x;
+        normals[i1].y += normal.y;
+        normals[i1].z += normal.z;
+        
+        normals[i2].x += normal.x;
+        normals[i2].y += normal.y;
+        normals[i2].z += normal.z;
+        
+        normals[i3].x += normal.x;
+        normals[i3].y += normal.y;
+        normals[i3].z += normal.z;
     }
     
-    // Normalize all vertex normals
-    for normal in normals.iter_mut() {
-        if normal.magnitude() > 0.0 {
-            normal.normalize_mut();
+    // Normalize all the normals
+    for normal in &mut normals {
+        let length = (normal.x * normal.x + normal.y * normal.y + normal.z * normal.z).sqrt();
+        if length > 0.0 {
+            normal.x /= length;
+            normal.y /= length;
+            normal.z /= length;
         }
     }
     

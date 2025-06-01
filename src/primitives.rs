@@ -15,14 +15,14 @@
 //!
 //! ```rust
 //! use mesh_tools::primitives::generate_sphere;
-//! use nalgebra::{Point3, Vector3, Vector2};
+//! use mesh_tools::compat::{Point3, Vector3, Vector2};
 //! 
 //! // Generate a sphere with radius 1.0
 //! let (positions, indices, normals, uvs) = generate_sphere(1.0, 16, 8);
 //! ```
 
 use std::f32::consts::PI;
-use nalgebra::{Point3, Vector2, Vector3};
+use crate::compat::{Point3, Vector2, Vector3};
 use crate::builder_primitives::Triangle;
 
 /// Generate a plane (flat surface) with subdivisions
@@ -68,13 +68,13 @@ pub fn generate_plane(
             let z_pos = z_percent * depth - depth_half;
             
             // Position
-            positions.push(Point3::new(x_pos, 0.0, z_pos));
+            positions.push(crate::compat::point3::new(x_pos, 0.0, z_pos));
             
             // Normal
-            normals.push(Vector3::new(0.0, 1.0, 0.0));
+            normals.push(crate::compat::vector3::new(0.0, 1.0, 0.0));
             
             // UV
-            uvs.push(Vector2::new(x_percent, 1.0 - z_percent));  // Flip Y for texture coordinates
+            uvs.push(crate::compat::vector2::new(x_percent, 1.0 - z_percent));  // Flip Y for texture coordinates
         }
     }
     
@@ -134,14 +134,14 @@ pub fn generate_sphere(
             let z_pos = radius * theta.cos() * phi.sin();
             
             // Position
-            positions.push(Point3::new(x_pos, y_pos, z_pos));
+            positions.push(crate::compat::point3::new(x_pos, y_pos, z_pos));
             
             // Normal (normalized position)
             let length = (x_pos * x_pos + y_pos * y_pos + z_pos * z_pos).sqrt();
-            normals.push(Vector3::new(x_pos / length, y_pos / length, z_pos / length));
+            normals.push(crate::compat::vector3::new(x_pos / length, y_pos / length, z_pos / length));
             
             // UV
-            uvs.push(Vector2::new(u, 1.0 - v));  // Flip V for texture coordinates
+            uvs.push(crate::compat::vector2::new(u, 1.0 - v));  // Flip V for texture coordinates
         }
     }
     
@@ -234,14 +234,14 @@ pub fn generate_cylinder(
             let cos_theta = theta.cos();
             
             // Position
-            positions.push(Point3::new(radius * cos_theta, y_pos, radius * sin_theta));
+            positions.push(crate::compat::point3::new(radius * cos_theta, y_pos, radius * sin_theta));
             
             // Normal
             let (nx, ny, nz) = get_slope_normal(radius, slope_factor, u);
-            normals.push(Vector3::new(nx, ny, nz));
+            normals.push(crate::compat::vector3::new(nx, ny, nz));
             
             // UV
-            uvs.push(Vector2::new(u, 1.0 - v));
+            uvs.push(crate::compat::vector2::new(u, 1.0 - v));
         }
     }
     
@@ -267,11 +267,11 @@ pub fn generate_cylinder(
         
         // Top cap
         // Center vertex
-        positions.push(Point3::new(0.0, height / 2.0, 0.0));
+        positions.push(crate::compat::point3::new(0.0, height / 2.0, 0.0));
         
-        normals.push(Vector3::new(0.0, 1.0, 0.0));
+        normals.push(crate::compat::vector3::new(0.0, 1.0, 0.0));
         
-        uvs.push(Vector2::new(0.5, 0.5));
+        uvs.push(crate::compat::vector2::new(0.5, 0.5));
         
         // Cap vertices
         for x in 0..=radial_segments {
@@ -282,13 +282,13 @@ pub fn generate_cylinder(
             let sin_theta = theta.sin();
             
             // Position
-            positions.push(Point3::new(radius_top * cos_theta, height / 2.0, radius_top * sin_theta));
+            positions.push(crate::compat::point3::new(radius_top * cos_theta, height / 2.0, radius_top * sin_theta));
             
             // Normal
-            normals.push(Vector3::new(0.0, 1.0, 0.0));
+            normals.push(crate::compat::vector3::new(0.0, 1.0, 0.0));
             
             // UV
-            uvs.push(Vector2::new(cos_theta * 0.5 + 0.5, sin_theta * 0.5 + 0.5));
+            uvs.push(crate::compat::vector2::new(cos_theta * 0.5 + 0.5, sin_theta * 0.5 + 0.5));
         }
         
         // Top cap indices
@@ -306,11 +306,11 @@ pub fn generate_cylinder(
         let start_index = positions.len() / 3;
         
         // Center vertex
-        positions.push(Point3::new(0.0, -height / 2.0, 0.0));
+        positions.push(crate::compat::point3::new(0.0, -height / 2.0, 0.0));
         
-        normals.push(Vector3::new(0.0, -1.0, 0.0));
+        normals.push(crate::compat::vector3::new(0.0, -1.0, 0.0));
         
-        uvs.push(Vector2::new(0.5, 0.5));
+        uvs.push(crate::compat::vector2::new(0.5, 0.5));
         
         // Cap vertices
         for x in 0..=radial_segments {
@@ -321,13 +321,13 @@ pub fn generate_cylinder(
             let sin_theta = theta.sin();
             
             // Position
-            positions.push(Point3::new(radius_bottom * cos_theta, -height / 2.0, radius_bottom * sin_theta));
+            positions.push(crate::compat::point3::new(radius_bottom * cos_theta, -height / 2.0, radius_bottom * sin_theta));
             
             // Normal
-            normals.push(Vector3::new(0.0, -1.0, 0.0));
+            normals.push(crate::compat::vector3::new(0.0, -1.0, 0.0));
             
             // UV
-            uvs.push(Vector2::new(cos_theta * 0.5 + 0.5, sin_theta * 0.5 + 0.5));
+            uvs.push(crate::compat::vector2::new(cos_theta * 0.5 + 0.5, sin_theta * 0.5 + 0.5));
         }
         
         // Bottom cap indices
@@ -401,7 +401,7 @@ pub fn generate_torus(
             let y = (radius + tube * v.cos()) * u.sin();
             let z = tube * v.sin();
             
-            positions.push(Point3::new(x, y, z));
+            positions.push(crate::compat::point3::new(x, y, z));
             
             // Normal
             let center_x = radius * u.cos();
@@ -413,10 +413,10 @@ pub fn generate_torus(
             
             // Normalize
             let length = (nx * nx + ny * ny + nz * nz).sqrt();
-            normals.push(Vector3::new(nx / length, ny / length, nz / length));
+            normals.push(crate::compat::vector3::new(nx / length, ny / length, nz / length));
             
             // UV
-            uvs.push(Vector2::new(i as f32 / tubular_segments as f32, j as f32 / radial_segments as f32));
+            uvs.push(crate::compat::vector2::new(i as f32 / tubular_segments as f32, j as f32 / radial_segments as f32));
         }
     }
     
@@ -480,16 +480,16 @@ pub fn generate_icosahedron(radius: f32) -> (Vec<Point3<f32>>, Vec<Triangle>, Ve
             vertex[2] / length * radius,
         ];
         
-        positions.push(Point3::new(normalized[0], normalized[1], normalized[2]));
+        positions.push(crate::compat::point3::new(normalized[0], normalized[1], normalized[2]));
         
         // Normals (same as normalized positions)
-        normals.push(Vector3::new(normalized[0] / radius, normalized[1] / radius, normalized[2] / radius));
+        normals.push(crate::compat::vector3::new(normalized[0] / radius, normalized[1] / radius, normalized[2] / radius));
         
         // Basic UV mapping (spherical projection)
         let u = 0.5 + (normalized[0] / radius).atan2(normalized[2] / radius) / (2.0 * PI);
         let v = 0.5 - (normalized[1] / radius).asin() / PI;
         
-        uvs.push(Vector2::new(u, v));
+        uvs.push(crate::compat::vector2::new(u, v));
     }
     
     // The 20 triangles of the icosahedron
