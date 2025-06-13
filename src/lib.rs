@@ -77,6 +77,7 @@ pub mod builder;     // Main GltfBuilder implementation
 mod builder_primitives;  // Implementations for primitive shape creation
 mod builder_texture;     // Implementations for texture handling
 mod builder_material;    // Implementations for material handling
+mod builder_animation;   // Implementations for animation handling
 
 // Re-exports
 pub use error::{GltfError, Result};
@@ -92,3 +93,4 @@ pub use constants::sampler_filter;
 pub use constants::sampler_wrap;
 pub use constants::alpha_mode;
 pub use constants::primitive_mode;
+pub use builder_animation::{AnimationPath, InterpolationType};

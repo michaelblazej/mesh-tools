@@ -53,6 +53,9 @@ pub struct Gltf {
     pub samplers: Option<Vec<Sampler>>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub animations: Option<Vec<Animation>>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "extensionsUsed")]
     pub extensions_used: Option<Vec<String>>,
     
@@ -334,4 +337,44 @@ pub struct Sampler {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "wrapT")]
     pub wrap_t: Option<usize>,
+}
+
+/// Represents a glTF animation
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct Animation {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub channels: Option<Vec<AnimationChannel>>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub samplers: Option<Vec<AnimationSampler>>
+}
+
+/// Represents a glTF animation channel
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct AnimationChannel {
+    pub sampler: usize,
+    
+    pub target: AnimationChannelTarget
+}
+
+/// Represents a glTF animation channel target
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct AnimationChannelTarget {
+    pub node: usize,
+    
+    pub path: String
+}
+
+/// Represents a glTF animation sampler
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct AnimationSampler {
+    pub input: usize,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interpolation: Option<String>,
+    
+    pub output: usize
 }
