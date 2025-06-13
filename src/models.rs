@@ -15,14 +15,13 @@ use std::collections::HashMap;
 /// It includes scenes, nodes, meshes, materials, textures, and binary data references.
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Gltf {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub asset: Option<Asset>,
-    
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scenes: Option<Vec<Scene>>,
+    pub asset: Asset,
     
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scene: Option<usize>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scenes: Option<Vec<Scene>>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nodes: Option<Vec<Node>>,
@@ -56,6 +55,9 @@ pub struct Gltf {
     pub animations: Option<Vec<Animation>>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub extensions: Option<serde_json::Value>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "extensionsUsed")]
     pub extensions_used: Option<Vec<String>>,
     
@@ -68,7 +70,7 @@ pub struct Gltf {
 }
 
 /// Represents the glTF asset information
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Asset {
     pub version: String,
     
@@ -227,6 +229,9 @@ pub struct Material {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "doubleSided")]
     pub double_sided: Option<bool>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extensions: Option<MaterialExtensions>,
 }
 
 /// Represents a glTF PBR material
@@ -377,4 +382,36 @@ pub struct AnimationSampler {
     pub interpolation: Option<String>,
     
     pub output: usize
+}
+
+/// Represents material extensions for glTF
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct MaterialExtensions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "KHR_materials_pbrSpecularGlossiness")]
+    pub pbr_specular_glossiness: Option<PbrSpecularGlossiness>,
+}
+
+/// Represents a glTF specular-glossiness PBR material extension
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct PbrSpecularGlossiness {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "diffuseFactor")]
+    pub diffuse_factor: Option<[f32; 4]>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "diffuseTexture")]
+    pub diffuse_texture: Option<TextureInfo>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "specularFactor")]
+    pub specular_factor: Option<[f32; 3]>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "glossinessFactor")]
+    pub glossiness_factor: Option<f32>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "specularGlossinessTexture")]
+    pub specular_glossiness_texture: Option<TextureInfo>,
 }

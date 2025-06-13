@@ -74,10 +74,11 @@ pub mod mesh;        // Mesh creation and manipulation
 pub mod builder;     // Main GltfBuilder implementation
 
 // Internal implementation modules
-mod builder_primitives;  // Implementations for primitive shape creation
-mod builder_texture;     // Implementations for texture handling
-mod builder_material;    // Implementations for material handling
-mod builder_animation;   // Implementations for animation handling
+mod builder_primitives;       // Implementations for primitive shape creation
+mod builder_texture;          // Implementations for texture handling
+mod builder_material;         // Implementations for material handling
+mod builder_material_specular; // Implementations for specular material handling
+mod builder_animation;        // Implementations for animation handling
 
 // Re-exports
 pub use error::{GltfError, Result};

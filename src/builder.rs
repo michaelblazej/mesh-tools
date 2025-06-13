@@ -41,7 +41,7 @@ impl GltfBuilder {
             copyright: None,
         };
         
-        gltf.asset = Some(asset);
+        gltf.asset = asset;
         
         // Initialize empty collections
         gltf.scenes = Some(Vec::new());

@@ -177,17 +177,18 @@ The following table shows the current coverage of the [glTF 2.0 specification](h
 | | PBR Materials | ✅ Full | Base color, metallic, roughness |
 | | Alpha Modes | ✅ Full | Opaque, mask, blend modes |
 | | Double Sided | ✅ Full | Flag for double-sided rendering |
-| | Material Variations | ⚠️ Partial | No specular workflow, only metallic |
+| | Material Variations | ✅ Full | Both metallic-roughness and specular-glossiness (KHR_materials_pbrSpecularGlossiness) |
 | **Textures** |||||
 | | Samplers | ✅ Full | Filter modes, wrap modes |
 | | Images | ✅ Full | Embedded and external references |
 | | Texture Coordinates | ✅ Full | Multiple UV sets |
 | **Animation** |||||
-| | Animation | ❌ None | Not yet implemented |
+| | Animation | ✅ Full | Keyframe animation for translations, rotations, and scales |
 | | Skinning | ❌ None | Not yet implemented |
 | **Cameras** |||||
 | | Cameras | ❌ None | Not yet implemented |
 | **Extensions** |||||
+| | KHR_materials_pbrSpecularGlossiness | ✅ Full | Specular-glossiness PBR material workflow |
 | | KHR_materials_unlit | ❌ None | Not yet implemented |
 | | KHR_texture_transform | ❌ None | Not yet implemented |
 | | KHR_mesh_quantization | ❌ None | Not yet implemented |
