@@ -214,7 +214,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some(0.25),                     // Moderate roughness
         None,                           // Default alpha mode
         None,                           // No alpha cutoff
-        None                            // Not necessarily double sided
+        Some(true)                      // Make it double sided
     );
     
     // 3. Material with patterned metalness
