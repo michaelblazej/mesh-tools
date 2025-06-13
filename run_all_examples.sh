@@ -15,6 +15,7 @@ EXAMPLES=(
   "hierarchy_demo"
   "custom_mesh_demo"
   "primitives_demo"
+  "pbr_materials_demo"
   "instancing_demo"
   "terrain_demo"
 )
