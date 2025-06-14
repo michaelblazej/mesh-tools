@@ -18,6 +18,14 @@ EXAMPLES=(
   "pbr_materials_demo"
   "instancing_demo"
   "terrain_demo"
+  "animation_demo"
+  "emissive_mapping_demo"
+  "metalness_demo"
+  "normal_mapping_demo"
+  "occlusion_mapping_demo"
+  "roughness_demo"
+  "rustacean_plate_demo"
+  "specular_glossiness_demo"
 )
 
 # Colors for output
